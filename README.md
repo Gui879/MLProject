@@ -9,7 +9,7 @@
 - Remove outliers
   - Z-score
   - Boxplot
-  - Isolation Forest
+  - Isolation Forest (Extended)
   - DBScan
 - Remove duplicates
 - Correlation
