@@ -10,6 +10,7 @@
   - Z-score
   - Boxplot
   - Isolation Forest
+  - DBScan
 - Remove duplicates
 - Correlation
 - Feature Selection
