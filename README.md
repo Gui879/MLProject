@@ -7,6 +7,9 @@
 
 ### Tasks
 - Remove outliers
+  - Z-score
+  - Boxplot
+  - Isolation Forest
 - Remove duplicates
 - Correlation
 - Feature Selection
