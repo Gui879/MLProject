@@ -1,10 +1,10 @@
 import sys
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from ml_bc_pipeline.data_loader import Dataset
-from ml_bc_pipeline.data_preprocessing import Processor
-from ml_bc_pipeline.feature_engineering import FeatureEngineer
-from ml_bc_pipeline.model import grid_search_MLP, assess_generalization_auroc
+from Code.ml_bc_pipeline.data_loader import Dataset
+from Code.ml_bc_pipeline.data_preprocessing import Processor
+from Code.ml_bc_pipeline.feature_engineering import FeatureEngineer
+from Code.ml_bc_pipeline.model import grid_search_MLP, assess_generalization_auroc
 
 
 def main():
