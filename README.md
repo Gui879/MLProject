@@ -4,6 +4,7 @@
 - How do we deal with duplicates with different target values
 - Can we remove duplicates and generate new rows in the validating set.
 - Can we mess with the test set
+- NAO ESQUECER INCOME. encode das vars cat para multivariate outlier detection
 
 ### Tasks
 - Remove outliers
