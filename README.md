@@ -13,6 +13,7 @@
   - Isolation Forest (Extended)
   - DBScan
 - Remove duplicates
+- Missing values (k nearest neighbours mas cagar na cena)
 - Correlation
 - Feature Selection
   - Chi-Square (Select k-best)
