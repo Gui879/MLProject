@@ -30,3 +30,6 @@
   - LDA
   - Factor Avnalysis
 - Modeling
+
+## Não esquecer!!
+  - Ver se é preciso normalizar antes do mahalanobis distance
