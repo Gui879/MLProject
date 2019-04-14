@@ -8,6 +8,7 @@
 
 ### Tasks
 - Remove outliers
+  - PRECISAMOS DE MAIS 1 MANEIRA UNIVARIADA
   - Z-score
   - Boxplot
   - Isolation Forest (Extended)
