@@ -85,29 +85,43 @@ def xgboost(training, unseen, seed, cv=5):
 
     return xgb_model
 
-def assess_generalization_auroc(estimator, unseen):
+def assess_generalization_auroc(estimator, unseen, print_graph):
 
     y_score = estimator.predict_proba(unseen.loc[:, unseen.columns != "Response"].values)[:, 1]
     predicted = estimator.predict(unseen.loc[:, unseen.columns != "Response"].values)
     fpr, tpr, thresholds = roc_curve(unseen["Response"], y_score)
 
-    print(predicted.shape)
+    stats = {}
+    report = classification_report(unseen["Response"], predicted, output_dict=True)
 
     print(classification_report(unseen["Response"], predicted))
 
-    print('\n\nF1 Score >>> ', f1_score(unseen["Response"], predicted))
-    print('Recall >>> ', recall_score(unseen["Response"], predicted))
-    print('Precision >>> ', precision_score(unseen["Response"], predicted))
+    recall_ = recall_score(unseen["Response"], predicted)
+    f1_score_ = f1_score(unseen["Response"], predicted)
+    precision_ = precision_score(unseen["Response"], predicted)
+
+    for key in report.keys():
+        for key2 in report[key].keys():
+            stats[key+'_'+key2] = report[key][key2]
+
+    stats['recall'] = recall_
+    stats['precision'] = precision_
+    stats['f1_score'] = f1_score_
+
+    print('\n\nF1 Score >>> ', f1_score_)
+    print('Recall >>> ', recall_)
+    print('Precision >>> ', precision_)
 
     auc = roc_auc_score(unseen["Response"], y_score, average="weighted")
 
-    plt.figure(figsize=(5, 5))
-    plt.plot(fpr, tpr, marker='.', label=" (AUROC (unseen) {:.2f}".format(auc) + ")")
-    plt.plot([0, 1], [0.5, 0.5], 'k--')
-    plt.xlabel('Recall (unseen)')
-    plt.ylabel('Precision (unseen)')
-    plt.title('PR curve on unseen data ('+estimator.__class__.__name__+')')
-    plt.legend(loc='best', title="Models")
-    plt.show()
+    if print_graph:
+        plt.figure(figsize=(5, 5))
+        plt.plot(fpr, tpr, marker='.', label=" (AUROC (unseen) {:.2f}".format(auc) + ")")
+        plt.plot([0, 1], [0.5, 0.5], 'k--')
+        plt.xlabel('Recall (unseen)')
+        plt.ylabel('Precision (unseen)')
+        plt.title('PR curve on unseen data (' + estimator.__class__.__name__ + ')')
+        plt.legend(loc='best', title="Models")
+        plt.show()
 
-    return auc
+    return auc, stats

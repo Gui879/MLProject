@@ -5,6 +5,7 @@ import datetime
 
 
 
+
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.decomposition import FactorAnalysis
 from sklearn.decomposition import FastICA
@@ -22,51 +23,56 @@ class FeatureEngineer:
 
 
     def _extract_business_features(self):
-        #For some reason creating new variables is creating null values
-        ds_new_var = self.training
-        ds = self.training
-        # TER CUIDADO, CONFIRMAR SE O NUM WEB PURCHASES TB É
-        ds_new_var["Web_Purchases_Per_Visit"] = ds["NumWebPurchases"] / ds["NumWebVisitsMonth"]
-        ds_new_var["Total_Purchases"] = ds["NumWebPurchases"] + ds["NumCatalogPurchases"] + ds["NumStorePurchases"]
-        ds_new_var["RatioWebPurchases"] = ds["NumWebPurchases"] / ds_new_var["Total_Purchases"]
-        ds_new_var["RatioCatalogPurchases"] = ds["NumCatalogPurchases"] / ds_new_var["Total_Purchases"]
-        ds_new_var["RatioStorePurchases"] = ds["NumStorePurchases"] / ds_new_var["Total_Purchases"]
 
-        ds_new_var["Age"] = datetime.datetime.now().year - ds["Year_Birth"]
-        ds_new_var["TotalAcceptedCampaigns"] = ds["AcceptedCmp1"] + ds["AcceptedCmp2"] + ds["AcceptedCmp3"] + ds[
-            "AcceptedCmp4"] + ds["AcceptedCmp5"]
-        # Total amount spent
-        ds_new_var["TotalMoneySpent"] = ds["MntWines"] + ds["MntFruits"] + ds["MntMeatProducts"] + ds[
-            "MntFishProducts"] + ds["MntSweetProducts"] + ds["MntGoldProds"]
-        # Calculating the ratios of money spent per category
-        ds_new_var["RatioWines"] = ds["MntWines"] / ds_new_var["TotalMoneySpent"]
-        ds_new_var["RatioFruits"] = ds["MntFruits"] / ds_new_var["TotalMoneySpent"]
-        ds_new_var["RatioMeatProducts"] = ds["MntMeatProducts"] / ds_new_var["TotalMoneySpent"]
-        ds_new_var["RatioFishProducts"] = ds["MntFishProducts"] / ds_new_var["TotalMoneySpent"]
-        ds_new_var["RatioSweetProducts"] = ds["MntSweetProducts"] / ds_new_var["TotalMoneySpent"]
-        ds_new_var["RatioGoldProds"] = ds["MntGoldProds"] / ds_new_var["TotalMoneySpent"]
+        print('BEFORE')
+        print(len(self.training.columns))
+        print(len(self.unseen.columns))
 
-        # Changing income to 2 years
-        ds_new_var["Income2Years"] = ds["Income"] * 2
+        for dataset in [self.training, self.unseen]:
+            # TER CUIDADO, CONFIRMAR SE O NUM WEB PURCHASES TB É
+            dataset["Web_Purchases_Per_Visit"] = dataset["NumWebPurchases"] / dataset["NumWebVisitsMonth"]
+            dataset["Total_Purchases"] = dataset["NumWebPurchases"] + dataset["NumCatalogPurchases"] + dataset["NumStorePurchases"]
+            dataset["RatioWebPurchases"] = dataset["NumWebPurchases"] / dataset["Total_Purchases"]
+            dataset["RatioCatalogPurchases"] = dataset["NumCatalogPurchases"] / dataset["Total_Purchases"]
+            dataset["RatioStorePurchases"] = dataset["NumStorePurchases"] / dataset["Total_Purchases"]
 
-        # Calculating Effort Rate
-        ds_new_var["EffortRate"] = ds_new_var["TotalMoneySpent"] / ds_new_var["Income2Years"]
+            dataset["Age"] = datetime.datetime.now().year - dataset["Year_Birth"]
+            dataset["TotalAcceptedCampaigns"] = dataset["AcceptedCmp1"]+dataset["AcceptedCmp2"]+dataset["AcceptedCmp3"]+dataset["AcceptedCmp4"]+dataset["AcceptedCmp5"]
+            # Total amount spent
+            dataset["TotalMoneySpent"] = dataset["MntWines"] + dataset["MntFruits"] + dataset["MntMeatProducts"] + dataset["MntFishProducts"] + dataset["MntSweetProducts"] + dataset["MntGoldProds"]
+            # Calculating the ratios of money spent per category
+            dataset["RatioWines"] = dataset["MntWines"] / dataset["TotalMoneySpent"]
+            dataset["RatioFruits"] = dataset["MntFruits"] / dataset["TotalMoneySpent"]
+            dataset["RatioMeatProducts"] = dataset["MntMeatProducts"] / dataset["TotalMoneySpent"]
+            dataset["RatioFishProducts"] = dataset["MntFishProducts"] / dataset["TotalMoneySpent"]
+            dataset["RatioSweetProducts"] = dataset["MntSweetProducts"] / dataset["TotalMoneySpent"]
+            dataset["RatioGoldProdataset"] = dataset["MntGoldProds"] / dataset["TotalMoneySpent"]
 
-        # All kids
-        ds_new_var["TotalKids"] = ds["Teenhome"] + ds["Kidhome"]
+            # Changing income to 2 years
+            dataset["Income2Years"] = dataset["Income"] * 2
 
-        # People per Household
-        status = ["Together", "Married"]
-        ds_new_var["Count_Household"] = 0
-        ds_new_var["Count_Household"].loc[(ds["Marital_Status"].isin(status))] = 2 + ds_new_var["TotalKids"]
-        ds_new_var["Count_Household"].loc[(~ds["Marital_Status"].isin(status))] = 1 + ds_new_var["TotalKids"]
+            # Calculating Effort Rate
+            dataset["EffortRate"] = dataset["TotalMoneySpent"] / dataset["Income2Years"]
 
-        # Income per person in household
-        ds_new_var["Income_Per_Person"] = ds_new_var["Income2Years"] / ds_new_var["Count_Household"]
-        features_to_enconde = ['Education', 'Marital_Status']
-        ds_new_var.fillna(0)
-        self.training.drop(features_to_enconde, axis=1, inplace=True)
-        self.unseen.drop(features_to_enconde, axis=1, inplace=True)
+            # All kidataset
+            dataset["TotalKids"] = dataset["Teenhome"] + dataset["Kidhome"]
+
+            # People per Household
+            status = ["Together", "Married"]
+            dataset["Count_Household"] = 0
+            dataset["Count_Household"].loc[(dataset["Marital_Status"].isin(status))] = 2 + dataset["TotalKids"]
+            dataset["Count_Household"].loc[(~dataset["Marital_Status"].isin(status))] = 1 + dataset["TotalKids"]
+
+            # Income per person in household
+            dataset["Income_Per_Person"] = dataset["Income2Years"] / dataset["Count_Household"]
+            features_to_enconde = ['Education', 'Marital_Status']
+            dataset.replace([np.inf, -np.inf], np.nan, inplace=True)
+            dataset.fillna(0, inplace=True)
+            dataset.drop(features_to_enconde, axis=1, inplace=True)
+
+        print('AFTER')
+        print(len(self.training.columns))
+        print(len(self.unseen.columns))
 
     def LDA_extraction(self):
         ds = self.training

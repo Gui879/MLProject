@@ -6,21 +6,21 @@ from ml_bc_pipeline.data_loader import Dataset
 from ml_bc_pipeline.data_preprocessing import Processor
 from ml_bc_pipeline.feature_engineering import FeatureEngineer
 from ml_bc_pipeline.model import grid_search_MLP, assess_generalization_auroc, decision_tree, naive_bayes, logistic_regression, ensemble
-
+from datetime import datetime
 
 def main():
 
     #this is an important project :D
 
-    #+++++++++++++++++ 1) load and prepare the data
-    ds = Dataset("ml_project1_data.xlsx").rm_df
-    #+++++++++++++++++ 2) split into train and unseen
-    seed = 0
-    DF_train, DF_unseen = train_test_split(ds.copy(), test_size=0.2, stratify=ds["Response"], random_state=seed)
-    #+++++++++++++++++ 3) preprocess, based on train
-    pr = Processor(DF_train, DF_unseen)
-    #+++++++++++++++++ 4) feature engineering
-    fe = FeatureEngineer(pr.training, pr.unseen)
+    # #+++++++++++++++++ 1) load and prepare the data
+    # ds = Dataset("ml_project1_data.xlsx").rm_df
+    # #+++++++++++++++++ 2) split into train and unseen
+    # seed = 0
+    # DF_train, DF_unseen = train_test_split(ds.copy(), test_size=0.2, stratify=ds["Response"], random_state=seed)
+    # #+++++++++++++++++ 3) preprocess, based on train
+    # pr = Processor(DF_train, DF_unseen)
+    # #+++++++++++++++++ 4) feature engineering
+    # fe = FeatureEngineer(pr.training, pr.unseen)
 
     '''
     # get top n features
@@ -56,10 +56,10 @@ def main():
     # NAIVE BAYES
     # =====================================
 
-    nb_param_grid = {'nb__alpha': [0, 0.25, 0.5, 0.75, 1]}  # i'm not sure about this parameter
-    nb_gscv = naive_bayes(DF_train, nb_param_grid, seed)
-    print("Best parameter set: ", nb_gscv.best_params_)
-    #estimators.append(nb_gscv.best_estimator_)
+    # nb_param_grid = {'nb__alpha': [0, 0.25, 0.5, 0.75, 1]}  # i'm not sure about this parameter
+    # nb_gscv = naive_bayes(fe.training, nb_param_grid, seed)
+    # print("Best parameter set: ", nb_gscv.best_params_)
+    # #estimators.append(nb_gscv.best_estimator_)
 
 
     '''
@@ -91,9 +91,37 @@ def main():
     estimators.append(ensemble_estimator)
     '''
     #for estimator in estimators:
-    auprc,df = assess_generalization_auroc(nb_gscv.best_estimator_, DF_unseen)
-    print("AUROC: {:.2f}".format(auprc))
 
+    def run_models(model, n=5, pring_graph=False):
+        log = []
+
+        for seed in range(n):
+            # +++++++++++++++++ 1) load and prepare the data
+            ds = Dataset("ml_project1_data.xlsx").rm_df
+            # +++++++++++++++++ 2) split into train and unseen
+
+            DF_train, DF_unseen = train_test_split(ds.copy(), test_size=0.2, stratify=ds["Response"], random_state=seed)
+            # +++++++++++++++++ 3) preprocess, based on train
+            pr = Processor(DF_train, DF_unseen)
+            # +++++++++++++++++ 4) feature engineering
+            fe = FeatureEngineer(pr.training, pr.unseen)
+
+            nb_param_grid = {'nb__alpha': [0, 0.25, 0.5, 0.75, 1]}  # i'm not sure about this parameter
+            classifier = model(fe.training, nb_param_grid, seed)
+            print("Best parameter set: ", classifier.best_params_)
+            # estimators.append(nb_gscv.best_estimator_)
+            auprc, stats = assess_generalization_auroc(classifier.best_estimator_, fe.unseen, pring_graph)
+            stats['model_type'] = model.__name__
+            stats['params'] = classifier.best_params_
+            stats['auroc'] = auprc
+            log.append(stats.values())
+
+            print("AUROC: {:.2f}".format(auprc))
+
+        log = pd.DataFrame(log, columns=stats.keys())
+        log.to_csv('Logs/'+model.__name__+'_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")+'.csv')
+
+    run_models(naive_bayes)
 
 if __name__ == "__main__":
     main()

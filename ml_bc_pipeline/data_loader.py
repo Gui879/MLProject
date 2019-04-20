@@ -14,7 +14,7 @@ class Dataset:
     def __init__(self, full_path):
         self.rm_df = pd.read_excel(full_path)
         self._drop_duplicates(full_path)
-        #self._drop_metadata_features()
+        self._drop_metadata_features()
         #self._drop_doubleback_features()
         self._drop_unusual_classes()
         #self._label_encoder()
