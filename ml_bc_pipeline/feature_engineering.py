@@ -16,8 +16,8 @@ class FeatureEngineer:
         self.training = training
         self.unseen = unseen
         print("First:",self.training.shape)
-        #self._extract_business_features()
-        self.LDA_extraction()
+        self._extract_business_features()
+        #self.LDA_extraction()
         print("Feature Engeneering Completed!")
 
 
@@ -26,25 +26,18 @@ class FeatureEngineer:
         ds_new_var = self.training
         ds = self.training
         # TER CUIDADO, CONFIRMAR SE O NUM WEB PURCHASES TB É
-        print(ds.dropna().shape)
-        print(len(ds["NumWebPurchases"] ),len(ds["NumWebVisitsMonth"]))
         ds_new_var["Web_Purchases_Per_Visit"] = ds["NumWebPurchases"] / ds["NumWebVisitsMonth"]
-        print(len(ds_new_var["Web_Purchases_Per_Visit"]))
-        print(ds_new_var.dropna().shape)
         ds_new_var["Total_Purchases"] = ds["NumWebPurchases"] + ds["NumCatalogPurchases"] + ds["NumStorePurchases"]
-        print(ds.dropna().shape)
         ds_new_var["RatioWebPurchases"] = ds["NumWebPurchases"] / ds_new_var["Total_Purchases"]
         ds_new_var["RatioCatalogPurchases"] = ds["NumCatalogPurchases"] / ds_new_var["Total_Purchases"]
         ds_new_var["RatioStorePurchases"] = ds["NumStorePurchases"] / ds_new_var["Total_Purchases"]
 
         ds_new_var["Age"] = datetime.datetime.now().year - ds["Year_Birth"]
-        print(ds.dropna().shape)
         ds_new_var["TotalAcceptedCampaigns"] = ds["AcceptedCmp1"] + ds["AcceptedCmp2"] + ds["AcceptedCmp3"] + ds[
             "AcceptedCmp4"] + ds["AcceptedCmp5"]
         # Total amount spent
         ds_new_var["TotalMoneySpent"] = ds["MntWines"] + ds["MntFruits"] + ds["MntMeatProducts"] + ds[
             "MntFishProducts"] + ds["MntSweetProducts"] + ds["MntGoldProds"]
-        print(ds.dropna().shape)
         # Calculating the ratios of money spent per category
         ds_new_var["RatioWines"] = ds["MntWines"] / ds_new_var["TotalMoneySpent"]
         ds_new_var["RatioFruits"] = ds["MntFruits"] / ds_new_var["TotalMoneySpent"]
@@ -71,7 +64,7 @@ class FeatureEngineer:
         # Income per person in household
         ds_new_var["Income_Per_Person"] = ds_new_var["Income2Years"] / ds_new_var["Count_Household"]
         features_to_enconde = ['Education', 'Marital_Status']
-
+        ds_new_var.fillna(0)
         self.training.drop(features_to_enconde, axis=1, inplace=True)
         self.unseen.drop(features_to_enconde, axis=1, inplace=True)
 
