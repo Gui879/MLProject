@@ -343,6 +343,13 @@ class Processor:
         sm_fr = infl.summary_frame()
         return sm_fr['cooks_d'].sort_values(ascending=False)
 
+    def outlier_rank(*arg):
+        IDS = []
+        for array in arg:
+            IDS = [id_ for sublist in IDS for id_ in sublist]
+        counts = [IDS.count(i) for i in IDS]
+        return dict(zip(IDS, counts))
+
     ### NORMALIZATION
     def _normalize(self):
         dummies = list(self.training.select_dtypes(include=["category", "object"]).columns)
