@@ -2,6 +2,7 @@ import sys
 import numpy as np
 import pandas as pd
 import datetime
+import re
 
 
 
@@ -10,10 +11,15 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.decomposition import FactorAnalysis
 from sklearn.decomposition import FastICA
 from sklearn.decomposition import PCA
+from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.feature_selection import RFE, SelectKBest, f_classif
+from sklearn.linear_model import LogisticRegression
+
 
 class FeatureEngineer:
     def __init__(self, training, unseen):
         self._rank = {}
+        self.report=[]
         self.training = training
         self.unseen = unseen
         print("First:",self.training.shape)
@@ -23,11 +29,7 @@ class FeatureEngineer:
 
 
     def _extract_business_features(self):
-
-        print('BEFORE')
-        print(len(self.training.columns))
-        print(len(self.unseen.columns))
-
+        self.report.append('_extract_business_features')
         for dataset in [self.training, self.unseen]:
             # TER CUIDADO, CONFIRMAR SE O NUM WEB PURCHASES TB É
             dataset["Web_Purchases_Per_Visit"] = dataset["NumWebPurchases"] / dataset["NumWebVisitsMonth"]
@@ -70,11 +72,10 @@ class FeatureEngineer:
             dataset.fillna(0, inplace=True)
             dataset.drop(features_to_enconde, axis=1, inplace=True)
 
-        print('AFTER')
-        print(len(self.training.columns))
-        print(len(self.unseen.columns))
 
-    def LDA_extraction(self):
+
+    def lda_extraction(self):
+        self.report.append('lda_extraction')
         ds = self.training
         y = self.training['Response']
         clf = LinearDiscriminantAnalysis(solver="eigen")
@@ -83,10 +84,10 @@ class FeatureEngineer:
         lda_coef = lda.coef_
         lda_means = lda.means_
         exp_var = lda.explained_variance_ratio_
-        print(lda.explained_variance_ratio_)
         return lda_ds, exp_var
 
     def factor_analysis_extraction(self):
+        self.report.append('factor_analysis_extraction')
         ds = self.training
         colunas = list(ds)
         fact = FactorAnalysis().fit(ds)
@@ -94,7 +95,8 @@ class FeatureEngineer:
         factor_analysis = pd.DataFrame(fact.components_, columns=colunas)
         return fact_ds, factor_analysis
 
-    def ICA(self):
+    def ica(self):
+        self.report.append('ica')
         ds = self.training
         colunas = list(ds)
         ica = FastICA().fit(ds)
@@ -102,7 +104,8 @@ class FeatureEngineer:
         indep_ds = ica.transform(ds)
         return indep_comp, indep_ds
 
-    def PCA_extraction(self):
+    def pca_extraction(self):
+        self.report.append('pca_extraction')
         ds = self.training
         pca = PCA()
         pca.fit(ds)
@@ -111,12 +114,14 @@ class FeatureEngineer:
         return components
 
     def _drop_constant_features(self):
+        self.report.append('_drop_constant_features')
         num_df = self.training._get_numeric_data().drop(['Response'], axis=1)
         const = num_df.columns[num_df.std() < 0.01]
         self.training.drop(labels=const, axis=1, inplace=True)
         self.unseen.drop(labels=const, axis=1, inplace=True)
 
     def box_cox_transformations(self, num_features, target):
+        self.report.append('box_cox_transformations')
         # 1) perform feature scaling, using MinMaxScaler from sklearn
         bx_cx_scaler = MinMaxScaler(feature_range=(0, 1), copy=False)
         X_tr_01 = bx_cx_scaler.fit_transform(self.training[num_features].values)
@@ -160,6 +165,7 @@ class FeatureEngineer:
         self.box_cox_features = num_features_BxCx
 
     def rank_features_chi_square(self, continuous_flist, categorical_flist):
+        self.report.append('rank_features_chi_square')
         chisq_dict = {}
         if continuous_flist:
             bindisc = KBinsDiscretizer(n_bins=10, encode='ordinal', strategy="uniform")
@@ -179,40 +185,47 @@ class FeatureEngineer:
         self._rank["chisq"] = df_chisq_rank
 
     def print_top(self, n):
-        print(self._rank.index[0:8])
+        print(self._rank.index[0:n])
 
     def get_top(self, criteria="chisq", n_top=10):
         input_features = list(self._rank[criteria].index[0:n_top])
         input_features.append("DepVar")
         return self.training[input_features], self.unseen[input_features]
 
-    def linear_regression_selection(self, vd):
-        df = self.training
+    def linear_regression_selection(self, vd, n):
+        self.report.append('linear_regression_selection')
         reg_results = pd.DataFrame(columns=['variable', 'Coef', 'std_err', 'adj_R2', 'pvalue'])
-
-        X = df[vd]
-        for var in scaled_df.drop(columns=vd).columns:
-            Y = df[var]
-            model = sm.OLS(X, Y).fit()
+        X = self.training[vd]
+        for var in self.training.drop(columns=vd).columns:
+            Y = self.training[var]
+            model = self.training.OLS(X, Y).fit()
             predictions = model.predict(X)
             reg_results = reg_results.append({'variable': var, 'Coef': model.params[0], 'std_err': model.bse[0],
                                               'pvalue': model.pvalues[0], 'adj_R2': model.rsquared_adj},
                                              ignore_index=True)
-        return reg_results
+            reg_results.sort_values(by='adj_R2', inplace=True, ascending=False)
 
-    def fisher_score(self, vd):
+        return np.array(reg_results.head(n)['variable'].values)
+
+
+    def fisher_score(self, vd, n):
+        self.report.append('fisher_score')
         ds = self.training
         f_score = []
         num = []
         den = []
         for class_ in np.unique(ds[vd]):
-            nj = ds[ds[vd] == i].shape[0]
-            uij = ds[ds[vd] == i].mean()
+            nj = ds[ds[vd] == class_].shape[0]
+            uij = ds[ds[vd] == class_].mean()
             ui = ds.mean()
-            pij = ds[ds[vd] == i].var()
+            pij = ds[ds[vd] == class_].var()
             num.append(nj * (uij - ui) ** 2)
             den.append(nj * pij)
-        return sum(num) / sum(den)
+        results = sum(num) / sum(den)
+        results.drop(labels='Response', inplace=True)
+        results.sort_values(ascending=False, inplace=True)
+        return np.array(results.head(n).index)
+
 
     def entropy(self):
         ds = self.training
@@ -223,9 +236,13 @@ class FeatureEngineer:
         else:
             return 0
 
-    def all_inf_gain(self, vd):
+
+
+    def all_inf_gain(self, vd, n):
+        self.report.append('all_inf_gain')
         ds = self.training
         vars_inf_gain = []
+        best_dict = {}
         for var in ds:
             v = np.sort(ds[var].unique())
             dict_gains = {}
@@ -233,46 +250,78 @@ class FeatureEngineer:
                 fbin_i = ds[var] <= v[i]
                 _0 = ds[vd][~fbin_i]
                 _1 = ds[vd][fbin_i]
-                dict_gains[var + "_" + str(v[i])] = self.entropy(ds[vd]) - (
-                        (~fbin_i).mean() * self.entropy(_0) + fbin_i.mean() * self.entropy(_1))
+                res = self.entropy(ds[vd]) - ((~fbin_i).mean() * self.entropy(_0) + fbin_i.mean() * self.entropy(_1))
+                dict_gains[var + "_" + str(v[i])] = res
             vars_inf_gain.append(dict_gains)
-        return vars_inf_gain
+
+        vars_inf_gain = {k: v for d in vars_inf_gain for k, v in d.items()}
+
+        best_dict = {}
+        keys = [key for key in vars_inf_gain.keys()]
+        for var in ds.drop(columns=vd):
+            r = re.compile(var + '_.*')
+            vals = [vars_inf_gain[x] for x in list(filter(r.match, keys))]
+            if vals:
+                best_dict[list(vars_inf_gain.keys())[list(vars_inf_gain.values()).index(max(vals))]] = max(vals)
+
+        best_dict = dict(sorted(best_dict.items(), key=lambda kv: kv[1], reverse=True))
+        ks = [k.split('_')[0] for k in best_dict.keys()]
+        return np.array(pd.DataFrame(best_dict, index=[0]).T.head(n).index), ks[:n]
 
     def ind_inf_gain(self, var, vd):
+        self.report.append('ind_inf_gain')
         ds = self.training
-        '''para ser usado no FCBF'''
         v = np.sort(ds[var].unique())
         dict_gains = {}
+
         for i in range(0, len(v) - 1):
             fbin_i = ds[var] <= v[i]
             _0 = ds[vd][~fbin_i]
             _1 = ds[vd][fbin_i]
             dict_gains[var + "_" + str(v[i])] = self.entropy(ds[vd]) - (
                         (~fbin_i).mean() * self.entropy(_0) + fbin_i.mean() * self.entropy(_1))
+
         return dict_gains
 
-    def recursive_feature_elimination(self, vd):
+    def recursive_feature_elimination(self, vd, n):
+        self.report.append('recursive_feature_elimination')
         ds = self.training
         'atencao que ha um parametro que ]e o numero de features que queremos ter... o default ]e metade!'
         X = ds.drop(columns=vd)
         Y = ds[vd]
         model = LogisticRegression()
-        rfe = RFE(model)
+        rfe = RFE(model, n_features_to_select=n)
         fit = rfe.fit(X, Y)
-        return fit.support_
+        return np.array(ds.drop(columns=vd).columns)[np.array(fit.support_)]
 
-    def Anova_F_selection(ds, vd):
+    def anova_F_selection(self, vd, n):
+        self.report.append('anova_F_selection')
         '''again.. aqui ha um k, que ]e o numero de features que queremos ter. Default ele da metade.'''
+        ds = self.training
         X = ds.drop(columns=vd)
         Y = ds[vd]
         sel = SelectKBest(score_func=f_classif)
         sel.fit(X, Y)
-        return sel.transform(X), sel.pvalues_
+        res = dict(zip(ds.drop(columns=vd).columns, sel.scores_))
+        res = dict(sorted(res.items(), key=lambda kv: kv[1], reverse=True))
+        return np.array(pd.DataFrame(res, index=[0]).T.head(n).index)
 
-    def extra_Trees_Classifier(ds, vd):
+    def extra_Trees_Classifier(self, vd, n):
+        self.report.append('extra_Trees_Classifier')
         ''' choosing number of features based on their importance'''
+        ds = self.training
         X = ds.drop(columns=vd)
         Y = ds[vd]
         model = ExtraTreesClassifier()
         model.fit(X, Y)
-        return model.feature_importances_
+        res = dict(zip(ds.drop(columns=vd).columns, model.feature_importances_))
+        res = dict(sorted(res.items(), key=lambda kv: kv[1], reverse=True))
+        return np.array(pd.DataFrame(res, index=[0]).T.head(n).index)
+
+    def feature_selection(*arg):
+        VARS = []
+        for array in arg:
+            VARS.append(array)
+        VARS = [id_ for sublist in VARS for id_ in sublist]
+        counts = [VARS.count(i) for i in VARS]
+        return dict(zip(VARS, counts))
