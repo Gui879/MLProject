@@ -16,6 +16,7 @@ from sklearn import svm
 from scipy.spatial.distance import cdist
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import OneHotEncoder
+from scipy.stats import norm, kstest
 
 class Processor:
     """ Performs data preprocessing
@@ -51,7 +52,7 @@ class Processor:
         self._drop_missing_values()
 
         #Outlier Treatment
-        self._manual_outlier_removal()
+        self._impute_num_missings_mean()
         self._normalize()
         print("Preprocessing complete!")
 
@@ -90,15 +91,24 @@ class Processor:
         self.unseen.dropna(inplace=True)
 
     def _impute_num_missings_mean(self):
-        ''' Imputes numerical features with the mean value and drops categorical missing values'''
-        self._imputer = SimpleImputer(missing_values=np.nan, strategy='mean')
-        X_train_imputed = self._imputer.fit_transform(self.training[self.numerical_var].values)
-        X_unseen_imputed = self._imputer.transform(self.unseen[self.numerical_var].values)
 
-        self.training[self.numerical_var] = X_train_imputed
-        self.unseen[self.numerical_var] = X_unseen_imputed
-        self.training[self.cat_vars].dropna(inplace=True)
-        self.unseen[self.cat_vars].dropna(inplace=True)
+        for column in self.training[self.numerical_var]:
+            data = self.training[column]
+            loc, scale = norm.fit(data)
+            n = norm(loc = loc, scale = scale)
+            _, p_value = kstest(self.training[column].values, n.cdf)
+            if p_value < 0.05:
+                self._imputer = SimpleImputer(missing_values=np.nan, strategy='mean')
+                self.training[column] = self._imputer.fit_transform(self.training[column].values.reshape(-1,1))
+                self.unseen[column] = self._imputer.transform(self.unseen[column].values.reshape(-1,1))
+            else:
+                self._imputer = SimpleImputer(missing_values=np.nan, strategy='median')
+                self.training[column] = self._imputer.fit_transform(self.training[column].values.reshape(-1,1))
+                self.unseen[column] = self._imputer.transform(self.unseen[column].values.reshape(-1,1))
+
+        self._imputer = SimpleImputer(missing_values=np.nan, strategy='most_frequent')
+        self.training[self.cat_vars] = self._imputer.fit_transform(self.training[self.cat_vars].values.reshape(-1,1))
+        self.unseen[self.cat_vars] = self._imputer.transform(self.unseen[self.cat_vars].values.reshape(-1,1))
 
     # DEALING WITH OUTLIERS
     ### UNIVARIATE OUTLIER DETECTION

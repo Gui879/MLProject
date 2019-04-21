@@ -2,16 +2,13 @@ import sys
 import numpy as np
 import pandas as pd
 import datetime
-
-
-
-
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.decomposition import FactorAnalysis
 from sklearn.decomposition import FastICA
 from sklearn.decomposition import PCA
 
 class FeatureEngineer:
+
     def __init__(self, training, unseen):
         self._rank = {}
         self.training = training
