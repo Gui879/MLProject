@@ -7,7 +7,7 @@ from sklearn.ensemble import IsolationForest
 from sklearn import metrics
 from scipy.stats import multivariate_normal
 from sklearn.metrics.pairwise import euclidean_distances
-#import eif as iso
+import eif as iso
 from sklearn.cluster import DBSCAN
 from sklearn.covariance import EllipticEnvelope
 from sklearn.neighbors import LocalOutlierFactor
@@ -37,9 +37,12 @@ class Processor:
         """
         self.training = training #.copy() to mantain a copy of the object
         self.unseen = unseen #.copy() to mantain a copy of the object
+        self.report = []
         self.cat_vars = ['Education', 'Marital_Status', 'AcceptedCmp3', 'AcceptedCmp4', 'AcceptedCmp5',
                     'AcceptedCmp1', 'AcceptedCmp2', 'Complain', 'Response']
+
         #missing columns 'Income' 'num_days_customer'
+
         self.numerical_var = ['Year_Birth', 'Kidhome', 'Teenhome',  'Recency', 'MntWines',
                          'MntFruits', 'MntMeatProducts', 'MntFishProducts',
                          'MntSweetProducts', 'MntGoldProds', 'NumDealsPurchases', 'NumWebPurchases',
@@ -58,8 +61,8 @@ class Processor:
 
     #DEALING WITH MISSING VALUES
     def _generate_dummies(self):
+        self.report.append('_generate_dummies')
         features_to_enconde = ['Education', 'Marital_Status']
-
         columns = []
         idxs = []
         control = 0
@@ -87,11 +90,13 @@ class Processor:
             self.unseen[c] = self.unseen[c].astype('category')
 
     def _drop_missing_values(self):
+        self.report.append('_generate_dummies')
         self.training.dropna(inplace=True)
         self.unseen.dropna(inplace=True)
 
     def _impute_num_missings_mean(self):
 
+	self.report.append('_impute_num_missings_mean')
         for column in self.training[self.numerical_var]:
             data = self.training[column]
             loc, scale = norm.fit(data)
@@ -113,6 +118,7 @@ class Processor:
     # DEALING WITH OUTLIERS
     ### UNIVARIATE OUTLIER DETECTION
     def _filter_df_by_std(self):
+        self.report.append('_filter_df_by_std')
         '''Removes Outliers based on standard deviation'''
         def _filter_ser_by_std(series_, n_stdev=3.0):
             mean_, stdev_ = series_.mean(), series_.std()
@@ -128,7 +134,7 @@ class Processor:
         return list(training_num.columns)
 
     def _manual_outlier_removal(self):
-
+        self.report.append('_manual_outlier_removal')
         #Ouliers were removed based on boxplot analysis as well as min max normalized data
 
         ds = self.training
@@ -178,6 +184,7 @@ class Processor:
         ds = ds[ds['NumWebVisitsMonth'] < 13]
 
     def _z_score_outlier_detection(self, treshold):
+        self.report.append('_z_score_outlier_detection')
         ''' Only for numerical data'''
 
         zscores = zscore(self.training[self.numerical_var])
@@ -197,6 +204,7 @@ class Processor:
         #return np.unique(my_outliers)
 
     def _boxplot_outlier_detection(self):
+        self.report.append('_boxplot_outlier_detection')
         zscores = zscore(self.training[self.numerical_var])
         iqr_ = iqr(zscores)
         #Count number of non outliers per line
@@ -222,7 +230,8 @@ class Processor:
         return box_plot_outliers
         '''
 
-    def Robust_z_score_method(self,df, treshold):
+    def robust_z_score_method(self,df, treshold):
+        self.report.append('robust_z_score_method')
         #What is ds???
         ds = self.rm_df
         numerical = self.numerical_var
@@ -244,6 +253,7 @@ class Processor:
     Used when fitting to define the threshold on the decision function. """
 
     def isolation_forest(self, contamination):
+        self.report.append('isolation_forest')
         ds = self.training[self.numerical_var]
         clf = IsolationForest(max_samples=100, contamination=contamination, random_state=np.random.RandomState(42))
         clf.fit(ds)
@@ -255,6 +265,7 @@ class Processor:
     ## CUIDADO AGAIN COM OS PARAMETROS
     # INSTALAR EIF NO PIP
     def extended_isolation_forest(self):
+        self.report.append('extended_isolation_forest')
         #Do values need to be normalized
         ds = self.training
         if_eif = iso.iForest(norm_encoded_ds.values, ntrees=100, sample_size=256, ExtensionLevel=2)
@@ -267,6 +278,7 @@ class Processor:
 
     # Getting the columns (variables) means
     def mahalanobis_distance_outlier(self):
+        self.report.append('mahalanobis_distance_outlier')
         ds = self.training
         var_means = ds.mean(axis=0).values.reshape(1, -1)
         # Getting the inverse of the covariance matrix
@@ -299,7 +311,8 @@ class Processor:
 
         return find_outliers()
 
-    def Dbscan_outlier_detection(self, minpoints=None, radius=None):
+    def dbscan_outlier_detection(self, minpoints=None, radius=None):
+        self.report.append('dbscan_outlier_detection')
         ds = self.training[self.numerical_var]
         outlier_detection = DBSCAN(
             eps=radius,
@@ -317,6 +330,7 @@ class Processor:
 
 
     def elliptic_envelope_out(self, contamination):
+        self.report.append('elliptic_envelope_out')
         ds = self.training[self.numerical_var]
         elliptic = EllipticEnvelope(contamination=contamination)
         elliptic.fit(ds)
@@ -328,6 +342,7 @@ class Processor:
 
 
     def local_outlier_factor(self, n_neighbors = None, contamination = None):
+        self.report.append('local_outlier_factor')
         ds = self.training[self.numerical_var]
         lof = LocalOutlierFactor(n_neighbors=10, contamination=0.1)
         outiler_lof = lof.fit_predict(ds)
@@ -337,6 +352,8 @@ class Processor:
         #return outiler_lof[outiler_lof == -1]
 
     def one_class_svm(self):
+
+        self.report.append('one_class_svm')
         ds = self.training[self.numerical_var]
         oneclasssvm = svm.OneClassSVM()
         oneclasssvm_outliers = oneclasssvm.fit_predict(ds)
@@ -345,6 +362,7 @@ class Processor:
         #return oneclasssvm_outliers[oneclasssvm_outliers == -1]
 
     def cooks_distance_outlier(self, vd):
+        self.report.append('cooks_distance_outlier')
         df = self.training
         X = df[vd]
         Y = df.drop(columns=vd)
@@ -353,7 +371,8 @@ class Processor:
         sm_fr = infl.summary_frame()
         return sm_fr['cooks_d'].sort_values(ascending=False)
 
-    def outlier_rank(*arg):
+    def outlier_rank(self,*arg):
+        self.report.append('outlier_rank')
         IDS = []
         for array in arg:
             IDS = [id_ for sublist in IDS for id_ in sublist]
@@ -362,6 +381,7 @@ class Processor:
 
     ### NORMALIZATION
     def _normalize(self):
+        self.report.append('_normalize')
         dummies = list(self.training.select_dtypes(include=["category", "object"]).columns)
         dummies.append('Response')
         scaler = MinMaxScaler()

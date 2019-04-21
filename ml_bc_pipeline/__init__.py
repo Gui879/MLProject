@@ -8,66 +8,18 @@ from ml_bc_pipeline.feature_engineering import FeatureEngineer
 from ml_bc_pipeline.model import grid_search_MLP, assess_generalization_auroc, decision_tree, naive_bayes, logistic_regression, xgboost, ensemble
 from datetime import datetime
 from os import listdir
+import json
+
 
 def main():
 
-    #this is an important project :D
+    test_version = len(listdir('Logs'))
 
-    # #+++++++++++++++++ 1) load and prepare the data
-    # ds = Dataset("ml_project1_data.xlsx").rm_df
-    # #+++++++++++++++++ 2) split into train and unseen
-    # seed = 0
-    # DF_train, DF_unseen = train_test_split(ds.copy(), test_size=0.2, stratify=ds["Response"], random_state=seed)
-    # #+++++++++++++++++ 3) preprocess, based on train
-    # pr = Processor(DF_train, DF_unseen)
-    # #+++++++++++++++++ 4) feature engineering
-    # fe = FeatureEngineer(pr.training, pr.unseen)
-
-
-    # get top n features
-    #criteria, n_top = "chisq", 9
-    #DF_train_top, DF_unseen_top = fe.get_top(criteria="chisq", n_top=n_top)
-
-    #+++++++++++++++++ 5) modelling
-    #estimators = []
-
-    #for estimator in estimators:
-
-    #models = []
-
-
-    def run_models(model, param_grid, n=5,pring_graph=False):
-        log = []
-
-        for seed in range(n):
-            # +++++++++++++++++ 1) load and prepare the data
-            ds = Dataset("ml_project1_data.xlsx").rm_df
-            # +++++++++++++++++ 2) split into train and unseen
-
-            DF_train, DF_unseen = train_test_split(ds.copy(), test_size=0.2, stratify=ds["Response"], random_state=seed)
-            # +++++++++++++++++ 3) preprocess, based on train
-            pr = Processor(DF_train, DF_unseen)
-            # +++++++++++++++++ 4) feature engineering
-            fe = FeatureEngineer(pr.training, pr.unseen)
-            if param_grid:
-                classifier = model(fe.training, param_grid, seed)
-                print("Best parameter set: ", classifier.best_params_)
-                estimator = classifier.best_estimator_
-            else:
-                estimator = model
-            # estimators.append(nb_gscv.best_estimator_)
-            auprc, stats = assess_generalization_auroc(estimator, fe.unseen, pring_graph)
-            stats['model_type'] = model.__name__
-            stats['params'] = classifier.best_params_
-            stats['auroc'] = auprc
-            log.append(stats.values())
-
-            print("AUROC: {:.2f}".format(auprc))
-
-        log = pd.DataFrame(log, columns=stats.keys())
-        log.to_csv('Logs/'+model.__name__+'_'+datetime.now().strftime("%m_%d_%Y_%H_%M_%S")+'.csv')
     global log
     log = pd.DataFrame()
+
+    global pipeline
+    pipeline = {}
     def report(best_estimator_, best_params_ = None,model_name = "None", print_graph = False):
         auprc, stats = assess_generalization_auroc(best_estimator_, fe.unseen, print_graph)
         stats['model_type'] = model_name
@@ -88,8 +40,10 @@ def main():
         DF_train, DF_unseen = train_test_split(ds.copy(), test_size=0.2, stratify=ds["Response"], random_state=seed)
         # +++++++++++++++++ 3) preprocess, based on train
         pr = Processor(DF_train, DF_unseen)
+        pipeline['preprocessing'] = pr.report
         # +++++++++++++++++ 4) feature engineering
         fe = FeatureEngineer(pr.training, pr.unseen)
+        pipeline['feature_engineering'] = fe.report
 
         # =====================================
         # NEURAL NETWORK
@@ -135,7 +89,7 @@ def main():
         report(logr_gscv.best_estimator_, logr_gscv.best_params_,logistic_regression.__name__)
 
         # =====================================
-        # XGBoost
+        # XGBOOST
         # =====================================
 
         xgb = xgboost(fe.training, fe.unseen, seed)
@@ -156,8 +110,9 @@ def main():
         ensemble_estimator = ensemble(fe.training, classifiers, seed)
         report(ensemble_estimator, classifiers.keys(), ensemble.__name__)
 
-    test_version = len(listdir('Logs'))
-    log.to_csv('Logs/' + 'version' + str(test_version)+ '_' + datetime.now().strftime("%m_%d_%Y_%H_%M_%S") + '.csv')
+    log.to_csv('Logs/' + 'version' + str(test_version)+ '.csv')
+    with open('Pipelines/version'+str(test_version)+'.txt', 'w') as file:
+        file.write(json.dumps(pipeline))
 
     def calculate_averages(variable_list):
         global log
@@ -177,6 +132,7 @@ def main():
         return averages
 
     averages = calculate_averages(['auroc','precision','recall','f1_score'])
-    averages.to_csv('Averages/version' + str(test_version) + '_averages.csv')
+    averages.to_csv('Averages/version' + str(test_version) + '.csv')
+
 if __name__ == "__main__":
     main()
