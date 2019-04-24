@@ -77,6 +77,7 @@ class Dataset:
         del merged
 
     def _drop_metadata_features(self):
+        #To be used for profit calculations
         metadata_features = ['Z_CostContact','Z_Revenue']
         self.rm_df.drop(labels=metadata_features, axis=1, inplace=True)
 

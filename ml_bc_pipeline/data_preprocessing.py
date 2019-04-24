@@ -39,7 +39,7 @@ class Processor:
         self.unseen = unseen #.copy() to mantain a copy of the object
         self.report = []
         self.cat_vars = ['Education', 'Marital_Status', 'AcceptedCmp3', 'AcceptedCmp4', 'AcceptedCmp5',
-                    'AcceptedCmp1', 'AcceptedCmp2', 'Complain', 'Response']
+                    'AcceptedCmp1', 'AcceptedCmp2', 'Complain']
 
         #missing columns 'Income' 'num_days_customer'
 
@@ -49,13 +49,16 @@ class Processor:
                          'NumCatalogPurchases', 'NumStorePurchases',
                          'NumWebVisitsMonth', 'Response']
 
-        self._generate_dummies()
+        #
 
         #Deal with missing values
-        self._drop_missing_values()
-
-        #Outlier Treatment
+        #self._drop_missing_values()
         self._impute_num_missings_mean()
+
+        #Generate Dummy variables
+        self._generate_dummies()
+        #Outlier Treatment
+
         self._normalize()
         print("Preprocessing complete!")
 
@@ -94,6 +97,21 @@ class Processor:
         self.training.dropna(inplace=True)
         self.unseen.dropna(inplace=True)
 
+    def convert_numeric_labelling(self,var):
+        temp = self.training[var].dropna().copy()
+        unique = temp.drop_duplicates()
+        var_dict = {}
+        for ix,value in enumerate(unique):
+            var_dict[value] = ix
+        self.training[var] = self.training[var].apply(lambda x: var_dict[x] if x in var_dict.keys() else None)
+        return var_dict
+
+    def revert_numeric_labelling(self,var,var_dict):
+        cat_dict = {}
+        for k,v in var_dict.items():
+            cat_dict[v] = k
+        self.training[var] = self.training[var].apply(lambda x: cat_dict[x] if x in cat_dict.keys() else None)
+
     def _impute_num_missings_mean(self):
         self.report.append('_impute_num_missings_mean')
         for column in self.training[self.numerical_var]:
@@ -110,10 +128,15 @@ class Processor:
                 self.training[column] = self._imputer.fit_transform(self.training[column].values.reshape(-1,1))
                 self.unseen[column] = self._imputer.transform(self.unseen[column].values.reshape(-1,1))
 
-        self._imputer = SimpleImputer(missing_values=np.nan, strategy='most_frequent')
-        self.training[self.cat_vars] = self._imputer.fit_transform(self.training[self.cat_vars].values.reshape(-1,1))
-        self.unseen[self.cat_vars] = self._imputer.transform(self.unseen[self.cat_vars].values.reshape(-1,1))
-
+        for var in self.cat_vars:
+            var_dict = self.convert_numeric_labelling(var)
+            try:
+                self._imputer = SimpleImputer(missing_values=np.nan, strategy='most_frequent')
+                self.training[var] = self._imputer.fit_transform(self.training[var].values.reshape(-1,1))
+                self.unseen[var] = self._imputer.transform(self.unseen[var].values.reshape(-1,1))
+            except:
+                print("Error on var:", var)
+            self.revert_numeric_labelling(var,var_dict)
     # DEALING WITH OUTLIERS
     ### UNIVARIATE OUTLIER DETECTION
     def _filter_df_by_std(self):
