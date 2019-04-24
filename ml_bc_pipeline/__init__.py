@@ -104,7 +104,6 @@ def main():
             'dt': dt_gscv.best_estimator_,
             'nb': nb_gscv.best_estimator_,
             'logr': logr_gscv.best_estimator_,
-
         }
 
         ensemble_estimator = ensemble(fe.training, classifiers, seed)
