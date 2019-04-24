@@ -90,7 +90,7 @@ class Processor:
             self.unseen[c] = self.unseen[c].astype('category')
 
     def _drop_missing_values(self):
-        self.report.append('_generate_dummies')
+        self.report.append('_drop_missing_values')
         self.training.dropna(inplace=True)
         self.unseen.dropna(inplace=True)
 
