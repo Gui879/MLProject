@@ -100,6 +100,10 @@ def assess_generalization_auroc(estimator, unseen, print_graph):
     f1_score_ = f1_score(unseen["Response"], predicted)
     precision_ = precision_score(unseen["Response"], predicted)
 
+    best_threshold, best_profit = profit_curve(unseen["Response"], y_score, print_graph)
+    stats['best_threshold'] = best_threshold
+    stats['best_profit'] = best_profit
+
     for key in report.keys():
         for key2 in report[key].keys():
             stats[key+'_'+key2] = report[key][key2]
@@ -125,3 +129,34 @@ def assess_generalization_auroc(estimator, unseen, print_graph):
         plt.show()
 
     return auc, stats
+
+def profit_curve(y_unseen, y_prob, print_graph):
+    thresholds, c = np.arange(0, 1, 0.025), 1
+    revenue_answer, expense_answer = 11, 3
+
+    revenues = []
+    dict_thresholds = {}
+
+    plt.figure(figsize=(5, 5))
+    i = 0
+    for t in thresholds:
+        y_pred = [0 if v < t else 1 for v in y_prob]
+        cm = confusion_matrix(y_unseen, y_pred)
+        revenue = cm[1][1] * revenue_answer
+        expenses = cm[:, 1].sum() * expense_answer
+        net_revenue = revenue - expenses
+        revenues.append(net_revenue)
+
+    if print_graph:
+        plt.plot(thresholds, revenues, marker='.', label="mlp")
+        plt.plot([0, 1], [0, 0], 'k--')
+        plt.xlabel('\"Probability\" threshold')
+        plt.ylabel("Net Revenue")
+        plt.title('Profit curves on unseen data')
+        plt.legend(loc='best', title="Models")
+        plt.show()
+
+    t = thresholds[np.argmax(revenues)]
+    best_revenue = revenues[np.argmax(revenues)]
+    return t, best_revenue
+
