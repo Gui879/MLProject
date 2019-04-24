@@ -132,7 +132,7 @@ def assess_generalization_auroc(estimator, unseen, print_graph):
 
 def profit_curve(y_unseen, y_prob, print_graph):
     thresholds, c = np.arange(0, 1, 0.025), 1
-    revenue_answer, expense_answer = 15, 2
+    revenue_answer, expense_answer = 11, 3
 
     revenues = []
     dict_thresholds = {}
