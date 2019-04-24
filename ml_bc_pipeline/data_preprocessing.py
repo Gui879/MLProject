@@ -95,8 +95,7 @@ class Processor:
         self.unseen.dropna(inplace=True)
 
     def _impute_num_missings_mean(self):
-
-	self.report.append('_impute_num_missings_mean')
+        self.report.append('_impute_num_missings_mean')
         for column in self.training[self.numerical_var]:
             data = self.training[column]
             loc, scale = norm.fit(data)
