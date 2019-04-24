@@ -131,7 +131,7 @@ def main():
                 averages = averages.append(pd.DataFrame([var_averages], columns = columns_))
         return averages
 
-    averages = calculate_averages(['auroc','precision','recall','f1_score'])
+    averages = calculate_averages(['auroc','precision','recall','f1_score','best_threshold', 'best_profit'])
     averages.to_csv('Averages/version' + str(test_version) + '.csv')
 
 if __name__ == "__main__":
