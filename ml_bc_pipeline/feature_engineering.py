@@ -21,7 +21,6 @@ class FeatureEngineer:
         self.unseen = unseen
         print("First:",self.training.shape)
         self._extract_business_features()
-        #self.LDA_extraction()
         print("Feature Engeneering Completed!")
 
 

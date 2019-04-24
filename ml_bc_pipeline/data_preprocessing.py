@@ -49,16 +49,18 @@ class Processor:
                          'NumCatalogPurchases', 'NumStorePurchases',
                          'NumWebVisitsMonth', 'Response']
 
-        #
+
 
         #Deal with missing values
-        #self._drop_missing_values()
-        self._impute_num_missings_mean()
+        self._drop_missing_values()
+
+        #Outlier Treatment
+        self._manual_outlier_removal()
 
         #Generate Dummy variables
         self._generate_dummies()
-        #Outlier Treatment
 
+        #Normalization
         self._normalize()
         print("Preprocessing complete!")
 
