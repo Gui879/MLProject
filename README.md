@@ -4,10 +4,17 @@
 - How do we deal with duplicates with different target values
 - Can we remove duplicates and generate new rows in the validating set.
 - Can we mess with the test set
+- NAO ESQUECER INCOME. encode das vars cat para multivariate outlier detection
 
 ### Tasks
 - Remove outliers
+  - PRECISAMOS DE MAIS 1 MANEIRA UNIVARIADA
+  - Z-score
+  - Boxplot
+  - Isolation Forest (Extended)
+  - DBScan
 - Remove duplicates
+- Missing values (k nearest neighbours mas cagar na cena)
 - Correlation
 - Feature Selection
   - Chi-Square (Select k-best)
@@ -23,3 +30,6 @@
   - LDA
   - Factor Avnalysis
 - Modeling
+
+## Não esquecer!!
+  - Ver se é preciso normalizar antes do mahalanobis distance

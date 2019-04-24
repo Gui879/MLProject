@@ -9,11 +9,7 @@
   },
   {
    "cell_type": "code",
-<<<<<<< HEAD:PreProcessing.ipynb
    "execution_count": 1,
-=======
-   "execution_count": 5,
->>>>>>> 31e90c677bd0c2aa4a5216d65fdca52728519617:.ipynb_checkpoints/PreProcessing-checkpoint.ipynb
    "metadata": {},
    "outputs": [],
    "source": [
@@ -24,19 +20,11 @@
   },
   {
    "cell_type": "code",
-<<<<<<< HEAD:PreProcessing.ipynb
    "execution_count": 2,
    "metadata": {},
    "outputs": [],
    "source": [
     "ds = pd.read_excel('ml_bc_pipeline\\\\ml_project1_data.xlsx')\n",
-=======
-   "execution_count": 6,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "ds = pd.read_excel('ml_project1_data.xlsx')\n",
->>>>>>> 31e90c677bd0c2aa4a5216d65fdca52728519617:.ipynb_checkpoints/PreProcessing-checkpoint.ipynb
     "ds.set_index('ID', inplace=True)"
    ]
   },
@@ -49,11 +37,7 @@
   },
   {
    "cell_type": "code",
-<<<<<<< HEAD:PreProcessing.ipynb
    "execution_count": 4,
-=======
-   "execution_count": 7,
->>>>>>> 31e90c677bd0c2aa4a5216d65fdca52728519617:.ipynb_checkpoints/PreProcessing-checkpoint.ipynb
    "metadata": {},
    "outputs": [
     {
@@ -111,7 +95,6 @@
   },
   {
    "cell_type": "code",
-<<<<<<< HEAD:PreProcessing.ipynb
    "execution_count": 5,
    "metadata": {},
    "outputs": [
@@ -246,14 +229,10 @@
   {
    "cell_type": "code",
    "execution_count": 11,
-=======
-   "execution_count": 8,
->>>>>>> 31e90c677bd0c2aa4a5216d65fdca52728519617:.ipynb_checkpoints/PreProcessing-checkpoint.ipynb
    "metadata": {},
    "outputs": [
     {
      "data": {
-<<<<<<< HEAD:PreProcessing.ipynb
       "text/html": [
        "<div>\n",
        "<style scoped>\n",
@@ -1412,96 +1391,273 @@
        "<p>2240 rows × 15 columns</p>\n",
        "</div>"
       ],
-=======
->>>>>>> 31e90c677bd0c2aa4a5216d65fdca52728519617:.ipynb_checkpoints/PreProcessing-checkpoint.ipynb
       "text/plain": [
-       "67.2"
+       "       Year_Birth    Income Dt_Customer  Recency  MntWines  MntFruits  \\\n",
+       "ID                                                                      \n",
+       "6862         1971    1730.0  2014-05-18       65         1          1   \n",
+       "5376         1979    2447.0  2013-01-06       42         1          1   \n",
+       "11110        1973    3502.0  2013-04-13       56         2          1   \n",
+       "9931         1963    4023.0  2014-06-23       29         5          0   \n",
+       "10311        1969    4428.0  2013-10-05        0        16          4   \n",
+       "3955         1965    4861.0  2014-06-22       20         2          1   \n",
+       "9303         1976    5305.0  2013-07-30       12        12          4   \n",
+       "5899         1950    5648.0  2014-03-13       68        28          0   \n",
+       "4246         1982    6560.0  2013-12-12        2        67         11   \n",
+       "4303         1957    6835.0  2012-12-08       76       107          2   \n",
+       "6237         1966    7144.0  2013-12-07       92        81          4   \n",
+       "387          1976    7500.0  2012-11-13       59         6         16   \n",
+       "2139         1975    7500.0  2013-10-02       19         3          1   \n",
+       "9909         1996    7500.0  2012-11-09       24         3         18   \n",
+       "7297         1973    7500.0  2013-12-26       54         5          3   \n",
+       "456          1986    7500.0  2013-02-07       96         1         11   \n",
+       "4692         1976    7500.0  2012-08-01       19         7          0   \n",
+       "9553         1987    7500.0  2013-01-09       94         0          2   \n",
+       "10710        1979    7500.0  2012-08-29       61         5          2   \n",
+       "4136         1992    7500.0  2012-12-03       63        10         17   \n",
+       "10641        1978    7500.0  2012-12-27        5         6          5   \n",
+       "10001        1985    7500.0  2012-08-01       98         5         17   \n",
+       "10659        1979    7500.0  2013-05-07        7         2          8   \n",
+       "10749        1991    8028.0  2012-09-18       62        73         18   \n",
+       "2980         1952    8820.0  2013-03-22       52        12          0   \n",
+       "10395        1986    8940.0  2012-08-22       25         1         45   \n",
+       "451          1989    9255.0  2013-12-20       91         9          0   \n",
+       "5342         1976    9548.0  2012-08-08       31         0          1   \n",
+       "7349         1973    9722.0  2012-10-02        7         6         17   \n",
+       "948          1971   10245.0  2013-05-15       32         4          7   \n",
+       "...           ...       ...         ...      ...       ...        ...   \n",
+       "4931         1977  157146.0  2013-04-29       13         1          0   \n",
+       "8475         1973  157243.0  2014-03-01       98        20          2   \n",
+       "5336         1971  157733.0  2013-06-04       37        39          1   \n",
+       "1501         1982  160803.0  2012-08-04       21        55         16   \n",
+       "1503         1976  162397.0  2013-06-03       31        85          1   \n",
+       "9432         1977  666666.0  2013-06-02       23         9         14   \n",
+       "1994         1983       NaN  2013-11-15       11         5          5   \n",
+       "5255         1986       NaN  2013-02-20       19         5          1   \n",
+       "7281         1959       NaN  2013-11-05       80        81         11   \n",
+       "7244         1951       NaN  2014-01-01       96        48          5   \n",
+       "8557         1982       NaN  2013-06-17       57        11          3   \n",
+       "10629        1973       NaN  2012-09-14       25        25          3   \n",
+       "8996         1957       NaN  2012-11-19        4       230         42   \n",
+       "9235         1957       NaN  2014-05-27       45         7          0   \n",
+       "5798         1973       NaN  2013-11-23       87       445         37   \n",
+       "8268         1961       NaN  2013-07-11       23       352          0   \n",
+       "1295         1963       NaN  2013-08-11       96       231         65   \n",
+       "2437         1989       NaN  2013-06-03       69       861        138   \n",
+       "2863         1970       NaN  2013-08-23       67       738         20   \n",
+       "10475        1970       NaN  2013-04-01       39       187          5   \n",
+       "2902         1958       NaN  2012-09-03       87        19          4   \n",
+       "4345         1964       NaN  2014-01-12       49         5          1   \n",
+       "3769         1972       NaN  2014-03-02       17        25          1   \n",
+       "7187         1969       NaN  2013-05-18       52       375         42   \n",
+       "1612         1981       NaN  2013-05-31       82        23          0   \n",
+       "5079         1971       NaN  2013-03-03       82        71          1   \n",
+       "10339        1954       NaN  2013-06-23       83       161          0   \n",
+       "3117         1955       NaN  2013-10-18       95       264          0   \n",
+       "5250         1943       NaN  2013-10-30       75       532        126   \n",
+       "8720         1978       NaN  2012-08-12       53        32          2   \n",
+       "\n",
+       "       MntMeatProducts  MntFishProducts  MntSweetProducts  MntGoldProds  \\\n",
+       "ID                                                                        \n",
+       "6862                 3                1                 1             1   \n",
+       "5376              1725                1                 1             1   \n",
+       "11110                1                0                 0             1   \n",
+       "9931                 1                1                 1             1   \n",
+       "10311               12                2                 4           321   \n",
+       "3955                 1                1                 0             1   \n",
+       "9303                 7                1                 3             5   \n",
+       "5899                 6                1                 1            13   \n",
+       "4246                26                4                 3           262   \n",
+       "4303                12                2                 2            12   \n",
+       "6237                33                5                 2           291   \n",
+       "387                 11               11                 1            16   \n",
+       "2139                10                3                 2            12   \n",
+       "9909                14               15                22            50   \n",
+       "7297                10               12                 7            20   \n",
+       "456                  5                4                 6             9   \n",
+       "4692                12               13                 7            32   \n",
+       "9553                 3                4                 1             5   \n",
+       "10710                3                3                 0             5   \n",
+       "4136                18                8                26            40   \n",
+       "10641                4               13                 4            25   \n",
+       "10001               17               13                14            34   \n",
+       "10659               11                3                 8            21   \n",
+       "10749               66                7                12             2   \n",
+       "2980                13                4                 2             4   \n",
+       "10395                3                4                 6            42   \n",
+       "451                  7                2                 0             4   \n",
+       "5342                 3               10                 6             9   \n",
+       "7349                16                6                16            42   \n",
+       "948                  7                6                 4            13   \n",
+       "...                ...              ...               ...           ...   \n",
+       "4931              1725                2                 1             1   \n",
+       "8475              1582                1                 2             1   \n",
+       "5336                 9                2                 0             8   \n",
+       "1501              1622               17                 3             4   \n",
+       "1503                16                2                 1             2   \n",
+       "9432                18                8                 1            12   \n",
+       "1994                 6                0                 2             1   \n",
+       "5255                 3                3               263           362   \n",
+       "7281                50                3                 2            39   \n",
+       "7244                48                6                10             7   \n",
+       "8557                22                2                 2             6   \n",
+       "10629               43               17                 4            17   \n",
+       "8996               192               49                37            53   \n",
+       "9235                 8                2                 0             1   \n",
+       "5798               359               98                28            18   \n",
+       "8268                27               10                 0            15   \n",
+       "1295               196               38                71           124   \n",
+       "2437               461               60                30            61   \n",
+       "2863               172               52                50            20   \n",
+       "10475               65               26                20            14   \n",
+       "2902                12                2                 2             6   \n",
+       "4345                 9                2                 0             4   \n",
+       "3769                13                0                 0             3   \n",
+       "7187                48               94                66            96   \n",
+       "1612                15                0                 2             7   \n",
+       "5079                16                0                 0             9   \n",
+       "10339               22                0                 0            24   \n",
+       "3117                21               12                 6           147   \n",
+       "5250               490              164               126           126   \n",
+       "8720              1607               12                 4            22   \n",
+       "\n",
+       "       NumDealsPurchases  NumWebPurchases  NumCatalogPurchases  \\\n",
+       "ID                                                               \n",
+       "6862                  15                0                    0   \n",
+       "5376                  15                0                   28   \n",
+       "11110                  0                0                    0   \n",
+       "9931                  15                0                    0   \n",
+       "10311                  0               25                    0   \n",
+       "3955                   0                0                    0   \n",
+       "9303                   0                1                    0   \n",
+       "5899                   1                1                    0   \n",
+       "4246                   0                1                    0   \n",
+       "4303                   0                0                    0   \n",
+       "6237                   0               23                    1   \n",
+       "387                    1                2                    0   \n",
+       "2139                   3                2                    0   \n",
+       "9909                   3                3                    1   \n",
+       "7297                   4                3                    1   \n",
+       "456                    2                2                    0   \n",
+       "4692                   5                4                    1   \n",
+       "9553                   1                0                    0   \n",
+       "10710                  1                1                    0   \n",
+       "4136                   4                3                    2   \n",
+       "10641                  4                2                    1   \n",
+       "10001                  4                2                    1   \n",
+       "10659                  4                3                    2   \n",
+       "10749                 15                0                    1   \n",
+       "2980                   4                3                    0   \n",
+       "10395                  3                3                    1   \n",
+       "451                    1                1                    1   \n",
+       "5342                   2                1                    0   \n",
+       "7349                   4                3                    1   \n",
+       "948                    3                1                    2   \n",
+       "...                  ...              ...                  ...   \n",
+       "4931                   0                0                   28   \n",
+       "8475                  15                0                   22   \n",
+       "5336                   0                1                    0   \n",
+       "1501                  15                0                   28   \n",
+       "1503                   0                0                    0   \n",
+       "9432                   4                3                    1   \n",
+       "1994                   1                1                    0   \n",
+       "5255                   0               27                    0   \n",
+       "7281                   1                1                    3   \n",
+       "7244                   3                2                    1   \n",
+       "8557                   2                2                    0   \n",
+       "10629                  3                3                    0   \n",
+       "8996                  12                7                    2   \n",
+       "9235                   1                1                    0   \n",
+       "5798                   1                2                    4   \n",
+       "8268                   3                6                    1   \n",
+       "1295                   1                6                    5   \n",
+       "2437                   1                6                    5   \n",
+       "2863                   6                2                    3   \n",
+       "10475                  2                4                    2   \n",
+       "2902                   1                1                    0   \n",
+       "4345                   1                1                    0   \n",
+       "3769                   1                1                    0   \n",
+       "7187                   7                4                   10   \n",
+       "1612                   2                3                    0   \n",
+       "5079                   4                2                    1   \n",
+       "10339                  2                4                    1   \n",
+       "3117                   3                6                    1   \n",
+       "5250                   1                5                    5   \n",
+       "8720                   0                0                    0   \n",
+       "\n",
+       "       NumStorePurchases  NumWebVisitsMonth  \n",
+       "ID                                           \n",
+       "6862                   0                 20  \n",
+       "5376                   0                  1  \n",
+       "11110                  0                 14  \n",
+       "9931                   0                 19  \n",
+       "10311                  0                  1  \n",
+       "3955                   0                 14  \n",
+       "9303                   0                 13  \n",
+       "5899                   0                 20  \n",
+       "4246                   1                 17  \n",
+       "4303                   1                 20  \n",
+       "6237                   1                  0  \n",
+       "387                    3                  8  \n",
+       "2139                   3                  5  \n",
+       "9909                   3                  9  \n",
+       "7297                   3                  7  \n",
+       "456                    3                  8  \n",
+       "4692                   2                  9  \n",
+       "9553                   3                  6  \n",
+       "10710                  2                  8  \n",
+       "4136                   2                  9  \n",
+       "10641                  3                  6  \n",
+       "10001                  3                  9  \n",
+       "10659                  2                  7  \n",
+       "10749                  0                 19  \n",
+       "2980                   3                  8  \n",
+       "10395                  3                  8  \n",
+       "451                    2                  8  \n",
+       "5342                   3                  8  \n",
+       "7349                   3                  8  \n",
+       "948                    2                  5  \n",
+       "...                  ...                ...  \n",
+       "4931                   0                  1  \n",
+       "8475                   0                  0  \n",
+       "5336                   1                  1  \n",
+       "1501                   1                  0  \n",
+       "1503                   1                  1  \n",
+       "9432                   3                  6  \n",
+       "1994                   2                  7  \n",
+       "5255                   0                  1  \n",
+       "7281                   4                  2  \n",
+       "7244                   4                  6  \n",
+       "8557                   3                  6  \n",
+       "10629                  3                  8  \n",
+       "8996                   8                  9  \n",
+       "9235                   2                  7  \n",
+       "5798                   8                  1  \n",
+       "8268                   7                  6  \n",
+       "1295                   7                  4  \n",
+       "2437                  12                  3  \n",
+       "2863                  10                  7  \n",
+       "10475                  6                  5  \n",
+       "2902                   3                  5  \n",
+       "4345                   2                  7  \n",
+       "3769                   3                  7  \n",
+       "7187                   4                  3  \n",
+       "1612                   3                  6  \n",
+       "5079                   3                  8  \n",
+       "10339                  4                  6  \n",
+       "3117                   5                  7  \n",
+       "5250                  11                  1  \n",
+       "8720                   1                  0  \n",
+       "\n",
+       "[2240 rows x 15 columns]"
       ]
      },
-     "execution_count": 8,
-     "metadata": {},
-     "output_type": "execute_result"
-    }
-   ],
-   "source": [
-    "len(ds)*0.03"
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "metadata": {},
-   "source": [
-    "Getting the indexes (idx) for categorical/dummy and numerical variables:"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 9,
-   "metadata": {},
-   "outputs": [
-    {
-     "data": {
-      "text/plain": [
-       "Index(['Year_Birth', 'Education', 'Marital_Status', 'Income', 'Kidhome',\n",
-       "       'Teenhome', 'Dt_Customer', 'Recency', 'MntWines', 'MntFruits',\n",
-       "       'MntMeatProducts', 'MntFishProducts', 'MntSweetProducts',\n",
-       "       'MntGoldProds', 'NumDealsPurchases', 'NumWebPurchases',\n",
-       "       'NumCatalogPurchases', 'NumStorePurchases', 'NumWebVisitsMonth',\n",
-       "       'AcceptedCmp3', 'AcceptedCmp4', 'AcceptedCmp5', 'AcceptedCmp1',\n",
-       "       'AcceptedCmp2', 'Complain', 'Z_CostContact', 'Z_Revenue', 'Response'],\n",
-       "      dtype='object')"
-      ]
-     },
-<<<<<<< HEAD:PreProcessing.ipynb
      "execution_count": 11,
-=======
-     "execution_count": 9,
->>>>>>> 31e90c677bd0c2aa4a5216d65fdca52728519617:.ipynb_checkpoints/PreProcessing-checkpoint.ipynb
      "metadata": {},
      "output_type": "execute_result"
     }
    ],
    "source": [
-    "ds.columns"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 38,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "cat_or_dummy_vars=['Education','Marital_Status','Kidhome','Teenhome','AcceptedCmp3','AcceptedCmp4','AcceptedCmp5',\n",
-    "                'AcceptedCmp1', 'AcceptedCmp2','Complain' ,'Response'] \n",
-    "\n",
-    "numerical_var=['Year_Birth','Recency','MntWines','MntFruits','MntMeatProducts','MntFishProducts',\n",
-    "              'MntSweetProducts','MntGoldProds','NumDealsPurchases','NumWebPurchases','NumCatalogPurchases','NumStorePurchases',\n",
-    "              'NumWebVisitsMonth']\n",
-    "target = 'Response'"
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "metadata": {},
-   "source": [
-    "### Fixing datatype consistencies:"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 11,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "#Turning dates into date type:\n",
-    "ds.Dt_Customer=pd.to_datetime(ds['Dt_Customer'].str.replace('-',''),format='%Y%m%d',errors='ignore')"
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "metadata": {},
-   "source": [
-    "### Detecting outliers:"
+    "ds[numerical_var]"
    ]
   },
   {
@@ -5295,7 +5451,6 @@
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-<<<<<<< HEAD:PreProcessing.ipynb
     "### Feature Extraction - Business Insights"
    ]
   },
@@ -5605,123 +5760,32 @@
     "#Income per person in household\n",
     "ds_new_var[\"Income_Per_Person\"] = ds_new_var[\"Income2Years\"]/ds_new_var[\"Count_Household\"]\n",
     "ds_new_var.head(5)"
-=======
-    "### Feature selection:"
->>>>>>> 31e90c677bd0c2aa4a5216d65fdca52728519617:.ipynb_checkpoints/PreProcessing-checkpoint.ipynb
    ]
   },
   {
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-<<<<<<< HEAD:PreProcessing.ipynb
     "#### Feature selection:"
-=======
-    "#### Scaled Mean Deviation"
->>>>>>> 31e90c677bd0c2aa4a5216d65fdca52728519617:.ipynb_checkpoints/PreProcessing-checkpoint.ipynb
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 105,
+   "execution_count": 52,
    "metadata": {},
    "outputs": [],
    "source": [
-    "def compute_smd(feature,target):\n",
-    "    ds_smd = ds[[feature,target]]\n",
-    "\n",
-    "    num_mean = ds_smd[feature].mean()\n",
-    "    ds_smd[feature + '_SMD'] = (ds_smd[feature].sub(num_mean)).div(num_mean)\n",
-    "\n",
-    "    smd_summary = ds_smd.groupby([target]).agg({feature + '_SMD': \"mean\", feature: \"mean\"})\n",
-    "    return (feature, smd_summary[feature+\"_SMD\"].abs().sum(), smd_summary[feature + '_SMD'].values[0] ,smd_summary[feature + '_SMD'].values[1] )"
+    "from sklearn import linear_model\n",
+    "clf = linear_model.Lasso(alpha=0.1)"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 111,
+   "execution_count": 97,
    "metadata": {},
-   "outputs": [
-    {
-     "name": "stderr",
-     "output_type": "stream",
-     "text": [
-      "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\Anaconda3_64\\lib\\site-packages\\ipykernel_launcher.py:5: SettingWithCopyWarning: \n",
-      "A value is trying to be set on a copy of a slice from a DataFrame.\n",
-      "Try using .loc[row_indexer,col_indexer] = value instead\n",
-      "\n",
-      "See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy\n",
-      "  \"\"\"\n"
-     ]
-    },
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "               Features  SMD Scores  Response 0  Response 1\n",
-      "12      MntMeatProducts    0.896849   -0.133727    0.763122\n",
-      "11             MntWines    0.768581   -0.114601    0.653980\n",
-      "10  NumCatalogPurchases    0.680555   -0.101476    0.579079\n",
-      "9             MntFruits    0.531776   -0.079292    0.452485\n",
-      "8      MntSweetProducts    0.502517   -0.074929    0.427588\n",
-      "7          MntGoldProds    0.465168   -0.069360    0.395809\n",
-      "6       MntFishProducts    0.454914   -0.067831    0.387083\n",
-      "5               Recency    0.328480    0.048979   -0.279501\n",
-      "4       NumWebPurchases    0.283978   -0.042343    0.241635\n",
-      "3     NumStorePurchases    0.062034   -0.009250    0.052784\n",
-      "2     NumDealsPurchases    0.005221   -0.000779    0.004443\n",
-      "1     NumWebVisitsMonth    0.005107    0.000762   -0.004346\n",
-      "0            Year_Birth    0.000364   -0.000054    0.000310\n"
-     ]
-    },
-    {
-     "data": {
-      "text/plain": [
-       "Text(0,0.5,'Features')"
-      ]
-     },
-     "execution_count": 111,
-     "metadata": {},
-     "output_type": "execute_result"
-    },
-    {
-     "data": {
-      "image/png": "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\n",
-      "text/plain": [
-       "<Figure size 432x288 with 1 Axes>"
-      ]
-     },
-     "metadata": {
-      "needs_background": "light"
-     },
-     "output_type": "display_data"
-    }
-   ],
+   "outputs": [],
    "source": [
-    "import matplotlib.pyplot as plt\n",
-    "\n",
-    "smd_scores = [compute_smd(feature,target) for feature in numerical_var]\n",
-    "smd_scores = pd.DataFrame(smd_scores, columns = ['Features','SMD Scores','Response 0','Response 1'])\n",
-    "smd_scores.sort_values(by = 'SMD Scores',ascending = True,inplace = True)\n",
-    "smd_scores.reset_index(inplace = True, drop = True)\n",
-    "#plt.subplot(1,2,1)\n",
-    "#plt.table(colLabels = smd_scores['Features'],cellText = smd_scores['SMD Scores'].values,loc='bottom' )4\n",
-    "print(smd_scores.sort_values(by = 'SMD Scores',ascending = False))\n",
-    "#plt.plot(smd_scores['SMD Scores'], title)\n",
-    "\n",
-    "my_range=range(1,len(smd_scores.index)+1)\n",
-    "\n",
-    "import seaborn as sns\n",
-    "plt.hlines(y=my_range, xmin=smd_scores['Response 0'], xmax = smd_scores['Response 1'], color='grey', alpha=0.4)\n",
-    "plt.scatter(smd_scores['Response 0'], my_range, color='skyblue', alpha=1, label='Response 0')\n",
-    "plt.scatter(smd_scores['Response 1'], my_range, color='green', alpha=0.4 , label='Response 1')\n",
-    "plt.legend()\n",
-    " \n",
-    "# Add title and axis names\n",
-    "#plt.yticks(my_range, ordered_df['group'])\n",
-    "plt.title(\"Comparison of the response 0 and the response 1\", loc='left')\n",
-    "plt.xlabel('Value of the variables')\n",
-    "plt.ylabel('Features')\n"
+    "clf.fit(#later)"
    ]
   },
   {
@@ -5796,40 +5860,7 @@
    "name": "python",
    "nbconvert_exporter": "python",
    "pygments_lexer": "ipython3",
-<<<<<<< HEAD:PreProcessing.ipynb
    "version": "3.6.5"
-=======
-   "version": "3.6.6"
-  },
-  "varInspector": {
-   "cols": {
-    "lenName": 16,
-    "lenType": 16,
-    "lenVar": 40
-   },
-   "kernels_config": {
-    "python": {
-     "delete_cmd_postfix": "",
-     "delete_cmd_prefix": "del ",
-     "library": "var_list.py",
-     "varRefreshCmd": "print(var_dic_list())"
-    },
-    "r": {
-     "delete_cmd_postfix": ") ",
-     "delete_cmd_prefix": "rm(",
-     "library": "var_list.r",
-     "varRefreshCmd": "cat(var_dic_list()) "
-    }
-   },
-   "types_to_exclude": [
-    "module",
-    "function",
-    "builtin_function_or_method",
-    "instance",
-    "_Feature"
-   ],
-   "window_display": false
->>>>>>> 31e90c677bd0c2aa4a5216d65fdca52728519617:.ipynb_checkpoints/PreProcessing-checkpoint.ipynb
   }
  },
  "nbformat": 4,
