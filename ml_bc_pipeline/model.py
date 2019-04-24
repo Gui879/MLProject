@@ -36,7 +36,7 @@ def grid_search_MLP(training, param_grid, seed, cv=5):
 
     pipeline = Pipeline([("mlpc", MLPClassifier(random_state=seed))])
 
-    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(average_precision_score))
+    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
     clf_gscv.fit(training.loc[:, (training.columns != "Response")].values, training["Response"].values)
 
     return clf_gscv
@@ -47,7 +47,7 @@ def decision_tree(training, param_grid, seed, cv=5):
 
     pipeline = Pipeline([("dt", DecisionTreeClassifier(random_state=seed))])
 
-    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(average_precision_score))
+    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
     clf_gscv.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
 
     return clf_gscv
@@ -57,7 +57,7 @@ def naive_bayes(training, param_grid, seed, cv=5):
 
     pipeline = Pipeline([("nb", ComplementNB())])
 
-    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(average_precision_score))
+    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
     clf_gscv.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
 
     return clf_gscv
@@ -66,7 +66,7 @@ def logistic_regression(training, param_grid, seed, cv=5):
 
     pipeline = Pipeline([ ("lr", LogisticRegression(random_state=seed))])
 
-    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(average_precision_score))
+    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
     clf_gscv.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
     print(type(clf_gscv))
 
@@ -88,10 +88,16 @@ def xgboost(training, unseen, seed, cv=5):
 def assess_generalization_auroc(estimator, unseen, print_graph):
 
     y_score = estimator.predict_proba(unseen.loc[:, unseen.columns != "Response"].values)[:, 1]
-    predicted = estimator.predict(unseen.loc[:, unseen.columns != "Response"].values)
     fpr, tpr, thresholds = roc_curve(unseen["Response"], y_score)
 
     stats = {}
+
+    best_threshold, best_profit = profit_curve(unseen["Response"], y_score, print_graph)
+    stats['best_threshold'] = best_threshold
+    stats['best_profit'] = best_profit
+
+    predicted = [0 if v < best_threshold else 1 for v in y_score]
+
     report = classification_report(unseen["Response"], predicted, output_dict=True)
 
     print(classification_report(unseen["Response"], predicted))
@@ -100,9 +106,6 @@ def assess_generalization_auroc(estimator, unseen, print_graph):
     f1_score_ = f1_score(unseen["Response"], predicted)
     precision_ = precision_score(unseen["Response"], predicted)
 
-    best_threshold, best_profit = profit_curve(unseen["Response"], y_score, print_graph)
-    stats['best_threshold'] = best_threshold
-    stats['best_profit'] = best_profit
 
     for key in report.keys():
         for key2 in report[key].keys():
@@ -135,10 +138,7 @@ def profit_curve(y_unseen, y_prob, print_graph):
     revenue_answer, expense_answer = 11, 3
 
     revenues = []
-    dict_thresholds = {}
 
-    plt.figure(figsize=(5, 5))
-    i = 0
     for t in thresholds:
         y_pred = [0 if v < t else 1 for v in y_prob]
         cm = confusion_matrix(y_unseen, y_pred)
@@ -148,6 +148,7 @@ def profit_curve(y_unseen, y_prob, print_graph):
         revenues.append(net_revenue)
 
     if print_graph:
+        plt.figure(figsize=(5, 5))
         plt.plot(thresholds, revenues, marker='.', label="mlp")
         plt.plot([0, 1], [0, 0], 'k--')
         plt.xlabel('\"Probability\" threshold')
@@ -160,3 +161,20 @@ def profit_curve(y_unseen, y_prob, print_graph):
     best_revenue = revenues[np.argmax(revenues)]
     return t, best_revenue
 
+
+def profit(y_true, y_score):
+    thresholds, c = np.arange(0, 1, 0.025), 1
+    revenue_answer, expense_answer = 11, 3
+
+    revenues = []
+
+    for t in thresholds:
+        y_pred = [0 if v < t else 1 for v in y_score]
+        cm = confusion_matrix(y_true, y_pred)
+        revenue = cm[1][1] * revenue_answer
+        expenses = cm[:, 1].sum() * expense_answer
+        net_revenue = revenue - expenses
+        revenues.append(net_revenue)
+
+    best_revenue = revenues[np.argmax(revenues)]
+    return best_revenue
