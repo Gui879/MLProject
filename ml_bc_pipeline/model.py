@@ -133,17 +133,18 @@ def assess_generalization_auroc(estimator, unseen, print_graph):
 
     return auc, stats
 
-def profit_curve(y_unseen, y_prob, print_graph):
+def profit_curve(y_true, y_score, print_graph):
     thresholds, c = np.arange(0, 1, 0.025), 1
     revenue_answer, expense_answer = 11, 3
 
     revenues = []
 
     for t in thresholds:
-        y_pred = [0 if v < t else 1 for v in y_prob]
-        cm = confusion_matrix(y_unseen, y_pred)
-        revenue = cm[1][1] * revenue_answer
-        expenses = cm[:, 1].sum() * expense_answer
+        y_pred = [0 if v < t else 1 for v in y_score]
+        cm = confusion_matrix(y_true, y_pred)
+        tn, fp, fn, tp = cm.reshape(4)
+        revenue = tp * revenue_answer
+        expenses = (tp+fp) * expense_answer
         net_revenue = revenue - expenses
         revenues.append(net_revenue)
 
@@ -158,8 +159,10 @@ def profit_curve(y_unseen, y_prob, print_graph):
         plt.show()
 
     t = thresholds[np.argmax(revenues)]
-    best_revenue = revenues[np.argmax(revenues)]
-    return t, best_revenue
+    best_revenue = np.max(revenues)
+    total_revenue = np.sum(y_true) * (revenue_answer - expense_answer)
+    revenue_ratio = best_revenue/total_revenue
+    return t, revenue_ratio
 
 
 def profit(y_true, y_score):
@@ -171,10 +174,13 @@ def profit(y_true, y_score):
     for t in thresholds:
         y_pred = [0 if v < t else 1 for v in y_score]
         cm = confusion_matrix(y_true, y_pred)
-        revenue = cm[1][1] * revenue_answer
-        expenses = cm[:, 1].sum() * expense_answer
+        tn, fp, fn, tp = cm.reshape(4)
+        revenue = tp * revenue_answer
+        expenses = (tp+fp) * expense_answer
         net_revenue = revenue - expenses
         revenues.append(net_revenue)
 
-    best_revenue = revenues[np.argmax(revenues)]
-    return best_revenue
+    best_revenue = np.max(revenues)
+    total_revenue = np.sum(y_true) * (revenue_answer - expense_answer)
+    revenue_ratio = best_revenue/total_revenue
+    return revenue_ratio

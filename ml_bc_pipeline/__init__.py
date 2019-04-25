@@ -14,7 +14,6 @@ import json
 def main():
 
     test_version = len(listdir('Logs'))
-
     global log
     log = pd.DataFrame()
 
@@ -35,12 +34,14 @@ def main():
     for seed in range(5):
         # +++++++++++++++++ 1) load and prepare the data
         ds = Dataset("ml_project1_data.xlsx").rm_df
-        # +++++++++++++++++ 2) split into train and unseen
 
+        # +++++++++++++++++ 2) split into train and unseen
         DF_train, DF_unseen = train_test_split(ds.copy(), test_size=0.2, stratify=ds["Response"], random_state=seed)
+
         # +++++++++++++++++ 3) preprocess, based on train
         pr = Processor(DF_train, DF_unseen)
         pipeline['preprocessing'] = pr.report
+
         # +++++++++++++++++ 4) feature engineering
         fe = FeatureEngineer(pr.training, pr.unseen)
         pipeline['feature_engineering'] = fe.report

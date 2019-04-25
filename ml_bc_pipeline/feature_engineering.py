@@ -160,6 +160,7 @@ class FeatureEngineer:
             self.unseen[feature] = np.round(self._bx_cx_trans_dict[best_trans_label](self.unseen[feature]), 4)
         self.box_cox_features = num_features_BxCx
 
+    ########FEATURE SELECTION################################
     def rank_features_chi_square(self, continuous_flist, categorical_flist):
         self.report.append('rank_features_chi_square')
         chisq_dict = {}
@@ -321,3 +322,28 @@ class FeatureEngineer:
         VARS = [id_ for sublist in VARS for id_ in sublist]
         counts = [VARS.count(i) for i in VARS]
         return dict(zip(VARS, counts))
+
+    def correlation_feature_selection(self):
+        for var in self.training.columns:
+            correlation = self.training[var,'Response'].corr()
+            if correlation > 0.8:
+
+
+    def correlation_based_feature_selection(self,feature_importance_function):
+        #Returns variables sorted from most importance to least important
+        variables_list = feature_importance_function(self.training)
+        to_delete = []
+        iter_ = iter(range(len(variables_list)))
+        for i in range(len(variables_list)):
+            if i in to_delete:
+                next(iter,None)
+            var1 = variables_list[i]
+            for j in range(len(variables_list)):
+                var2 = variables_list[j]
+                correlation = self.training[var1,var2].corr()
+                if correlation > 0.8:
+                    to_delete.append(j)
+
+        self.training = self.training[variables_list]
+
+
