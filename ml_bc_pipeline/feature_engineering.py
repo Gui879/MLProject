@@ -12,6 +12,7 @@ from sklearn.feature_selection import RFE, SelectKBest, f_classif
 from sklearn.linear_model import LogisticRegression
 
 
+
 class FeatureEngineer:
 
     def __init__(self, training, unseen):
@@ -315,10 +316,10 @@ class FeatureEngineer:
         res = dict(sorted(res.items(), key=lambda kv: kv[1], reverse=True))
         return np.array(pd.DataFrame(res, index=[0]).T.head(n).index)
 
-    def feature_selection(*arg):
+    def feature_selection_rank(*arg):
         VARS = []
         for array in arg:
             VARS.append(array)
         VARS = [id_ for sublist in VARS for id_ in sublist]
         counts = [VARS.count(i) for i in VARS]
-        return dict(zip(VARS, counts))
+        return dict(sorted(dict(zip(VARS, counts)).items(), key=lambda x: x[1], reverse=True))
