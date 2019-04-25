@@ -324,10 +324,12 @@ class FeatureEngineer:
         return dict(zip(VARS, counts))
 
     def correlation_feature_selection(self):
-        for var in self.training.columns:
-            correlation = self.training[var,'Response'].corr()
-            #To be done
-
+        feature_order = self.training.columns.drop('Response',axis = 0)
+        for var in range(len(feature_order)):
+            correlation = self.training[feature_order[var],'Response'].corr()
+            feature_order[var] = (var,correlation)
+        feature_order.sort(key=lambda x: x[1], reverse = True)
+        return feature_order
 
     def correlation_based_feature_selection(self,feature_importance_function):
         #Returns variables sorted from most importance to least important

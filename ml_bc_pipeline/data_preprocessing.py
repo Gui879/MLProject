@@ -35,6 +35,17 @@ class Processor:
             If you want them to be copies of respective objects, use .copy() on each parameter.
 
         """
+        columns = ['ID', 'Year_Birth', 'Education', 'Marital_Status', 'Income', 'Kidhome',
+       'Teenhome', 'Dt_Customer', 'Recency', 'MntWines', 'MntFruits',
+       'MntMeatProducts', 'MntFishProducts', 'MntSweetProducts',
+       'MntGoldProds', 'NumDealsPurchases', 'NumWebPurchases',
+       'NumCatalogPurchases', 'NumStorePurchases', 'NumWebVisitsMonth',
+       'AcceptedCmp3', 'AcceptedCmp4', 'AcceptedCmp5', 'AcceptedCmp1',
+       'AcceptedCmp2', 'Complain', 'Response']
+        if type(training) != pd.core.frame.DataFrame:
+            training = pd.DataFrame(training, columns = columns)
+        if type(unseen) != pd.core.frame.DataFrame:
+            testing = pd.DataFrame(unseen, columns = columns)
         self.training = training #.copy() to mantain a copy of the object
         self.unseen = unseen #.copy() to mantain a copy of the object
         self.report = []
