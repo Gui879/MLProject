@@ -27,7 +27,7 @@ class Processor:
 
     """
 
-    def __init__(self, training, unseen):
+    def __init__(self, training, unseen, seed):
         """ Constructor
 
             It is worth to notice that both training and unseen are nothing more nothing less
@@ -276,10 +276,10 @@ class Processor:
     """ CONTAMINATION: The amount of contamination of the data set, i.e. the proportion of outliers in the data set. 
     Used when fitting to define the threshold on the decision function. """
 
-    def isolation_forest(self, contamination):
+    def isolation_forest(self, contamination, seed):
         self.report.append('isolation_forest')
         ds = self.training[self.numerical_var]
-        clf = IsolationForest(max_samples=100, contamination=contamination, random_state=np.random.RandomState(42))
+        clf = IsolationForest(max_samples=100, contamination=contamination, random_state=seed)
         clf.fit(ds)
         self.training = pd.DataFrame(self.training.values[clf.predict(ds) == 1,:],columns=self.training.columns)
         #outliers_isoflorest = pd.Series(outliers_isoflorest)
