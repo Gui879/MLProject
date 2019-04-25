@@ -102,8 +102,9 @@ def assess_generalization_auroc(estimator, unseen, print_graph):
 
     stats = {}
 
-    best_threshold, best_profit = profit_curve(unseen["Response"], y_score, print_graph)
+    best_threshold, best_profit_ration, best_profit = profit_curve(unseen["Response"], y_score, print_graph)
     stats['best_threshold'] = best_threshold
+    stats['best_profit_ration'] = best_profit_ration
     stats['best_profit'] = best_profit
 
     predicted = [0 if v < best_threshold else 1 for v in y_score]
@@ -172,7 +173,7 @@ def profit_curve(y_true, y_score, print_graph):
     best_revenue = np.max(revenues)
     total_revenue = np.sum(y_true) * (revenue_answer - expense_answer)
     revenue_ratio = best_revenue/total_revenue
-    return t, revenue_ratio
+    return t, revenue_ratio, best_revenue
 
 
 def profit(y_true, y_score):
