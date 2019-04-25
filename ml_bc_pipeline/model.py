@@ -9,7 +9,7 @@ from sklearn.metrics import make_scorer, average_precision_score, precision_reca
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.naive_bayes import ComplementNB
 from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import VotingClassifier
+from sklearn.ensemble import VotingClassifier, AdaBoostClassifier, GradientBoostingClassifier
 import xgboost as xgb
 
 def grid_search_MLP(training, param_grid, seed, cv=5):
@@ -72,6 +72,15 @@ def logistic_regression(training, param_grid, seed, cv=5):
 
     return clf_gscv
 
+def adaboost(training, param_grid, seed, cv=5):
+    clf = AdaBoostClassifier(n_estimators=50, learning_rate=1).fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
+    return  clf
+
+
+def gradientBoosting(training, param_grid, seed, cv=5):
+    clf = GradientBoostingClassifier(n_estimators=20, learning_rate = 0.1, max_features=2, max_depth = 2, random_state = 0)
+    clf.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
+    return  clf
 
 def ensemble(training, classifiers, seed, cv=5):
 
@@ -88,6 +97,7 @@ def xgboost(training, unseen, seed, cv=5):
 def assess_generalization_auroc(estimator, unseen, print_graph):
 
     y_score = estimator.predict_proba(unseen.loc[:, unseen.columns != "Response"].values)[:, 1]
+    print(len(y_score))
     fpr, tpr, thresholds = roc_curve(unseen["Response"], y_score)
 
     stats = {}

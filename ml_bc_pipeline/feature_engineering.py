@@ -326,7 +326,7 @@ class FeatureEngineer:
     def correlation_feature_selection(self):
         for var in self.training.columns:
             correlation = self.training[var,'Response'].corr()
-            if correlation > 0.8:
+            #To be done
 
 
     def correlation_based_feature_selection(self,feature_importance_function):
