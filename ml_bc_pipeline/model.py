@@ -3,13 +3,13 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, cross_validate
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import make_scorer, average_precision_score, precision_recall_curve, roc_curve, roc_auc_score, f1_score, recall_score, precision_score, confusion_matrix, classification_report
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.naive_bayes import ComplementNB
 from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import VotingClassifier
+from sklearn.ensemble import VotingClassifier, AdaBoostClassifier, GradientBoostingClassifier
 import xgboost as xgb
 
 def grid_search_MLP(training, param_grid, seed, cv=5):
@@ -35,8 +35,7 @@ def grid_search_MLP(training, param_grid, seed, cv=5):
     #sklearn pipeline standardizes dummmie variables which we do not want so in here a custom scaler is used
 
     pipeline = Pipeline([("mlpc", MLPClassifier(random_state=seed))])
-
-    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(average_precision_score))
+    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
     clf_gscv.fit(training.loc[:, (training.columns != "Response")].values, training["Response"].values)
 
     return clf_gscv
@@ -47,17 +46,17 @@ def decision_tree(training, param_grid, seed, cv=5):
 
     pipeline = Pipeline([("dt", DecisionTreeClassifier(random_state=seed))])
 
-    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(average_precision_score))
+    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
     clf_gscv.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
 
     return clf_gscv
 
 
-def naive_bayes(training, param_grid, seed, cv=5):
+def naive_bayes(training, param_grid, cv=5):
 
     pipeline = Pipeline([("nb", ComplementNB())])
 
-    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(average_precision_score))
+    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
     clf_gscv.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
 
     return clf_gscv
@@ -66,32 +65,49 @@ def logistic_regression(training, param_grid, seed, cv=5):
 
     pipeline = Pipeline([ ("lr", LogisticRegression(random_state=seed))])
 
-    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(average_precision_score))
+    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
     clf_gscv.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
     print(type(clf_gscv))
 
     return clf_gscv
 
+def adaboost(training,seed):
+    clf = AdaBoostClassifier(n_estimators=50, learning_rate=1, random_state=seed)
+    clf.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
+    return  clf
 
-def ensemble(training, classifiers, seed, cv=5):
 
+def gradientBoosting(training, seed):
+    clf = GradientBoostingClassifier(n_estimators=20, learning_rate = 0.1, max_features=2, max_depth = 2, random_state = seed)
+    clf.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
+    return  clf
+
+
+def ensemble(training, classifiers):
     clf = VotingClassifier(estimators=list(classifiers.items()), voting='soft')
     clf.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
     return clf
 
-def xgboost(training, unseen, seed, cv=5):
 
-    xgb_model = xgb.XGBClassifier().fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
-
+def xgboost(training,seed):
+    xgb_model = xgb.XGBClassifier(random_state=seed).fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
     return xgb_model
+
 
 def assess_generalization_auroc(estimator, unseen, print_graph):
 
     y_score = estimator.predict_proba(unseen.loc[:, unseen.columns != "Response"].values)[:, 1]
-    predicted = estimator.predict(unseen.loc[:, unseen.columns != "Response"].values)
+    print(len(y_score))
     fpr, tpr, thresholds = roc_curve(unseen["Response"], y_score)
 
     stats = {}
+
+    best_threshold, best_profit = profit_curve(unseen["Response"], y_score, print_graph)
+    stats['best_threshold'] = best_threshold
+    stats['best_profit'] = best_profit
+
+    predicted = [0 if v < best_threshold else 1 for v in y_score]
+
     report = classification_report(unseen["Response"], predicted, output_dict=True)
 
     print(classification_report(unseen["Response"], predicted))
@@ -99,6 +115,7 @@ def assess_generalization_auroc(estimator, unseen, print_graph):
     recall_ = recall_score(unseen["Response"], predicted)
     f1_score_ = f1_score(unseen["Response"], predicted)
     precision_ = precision_score(unseen["Response"], predicted)
+
 
     for key in report.keys():
         for key2 in report[key].keys():
@@ -125,3 +142,55 @@ def assess_generalization_auroc(estimator, unseen, print_graph):
         plt.show()
 
     return auc, stats
+
+def profit_curve(y_true, y_score, print_graph):
+    thresholds, c = np.arange(0, 1, 0.025), 1
+    revenue_answer, expense_answer = 11, 3
+
+    revenues = []
+
+    for t in thresholds:
+        y_pred = [0 if v < t else 1 for v in y_score]
+        cm = confusion_matrix(y_true, y_pred)
+        tn, fp, fn, tp = cm.reshape(4)
+        revenue = tp * revenue_answer
+        expenses = (tp+fp) * expense_answer
+        net_revenue = revenue - expenses
+        revenues.append(net_revenue)
+
+    if print_graph:
+        plt.figure(figsize=(5, 5))
+        plt.plot(thresholds, revenues, marker='.', label="mlp")
+        plt.plot([0, 1], [0, 0], 'k--')
+        plt.xlabel('\"Probability\" threshold')
+        plt.ylabel("Net Revenue")
+        plt.title('Profit curves on unseen data')
+        plt.legend(loc='best', title="Models")
+        plt.show()
+
+    t = thresholds[np.argmax(revenues)]
+    best_revenue = np.max(revenues)
+    total_revenue = np.sum(y_true) * (revenue_answer - expense_answer)
+    revenue_ratio = best_revenue/total_revenue
+    return t, revenue_ratio
+
+
+def profit(y_true, y_score):
+    thresholds, c = np.arange(0, 1, 0.025), 1
+    revenue_answer, expense_answer = 11, 3
+
+    revenues = []
+
+    for t in thresholds:
+        y_pred = [0 if v < t else 1 for v in y_score]
+        cm = confusion_matrix(y_true, y_pred)
+        tn, fp, fn, tp = cm.reshape(4)
+        revenue = tp * revenue_answer
+        expenses = (tp+fp) * expense_answer
+        net_revenue = revenue - expenses
+        revenues.append(net_revenue)
+
+    best_revenue = np.max(revenues)
+    total_revenue = np.sum(y_true) * (revenue_answer - expense_answer)
+    revenue_ratio = best_revenue/total_revenue
+    return revenue_ratio

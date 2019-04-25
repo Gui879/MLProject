@@ -14,7 +14,6 @@ def main():
 
     seed = 0
     np.random.seed(seed)
-    '''
     df = Dataset('ml_project1_data.xlsx').rm_df
     y = df['Response']
     X = df.drop(columns='Response')
@@ -44,6 +43,6 @@ def main():
 
 
     plt.show()
-
+    '''
 if __name__ == "__main__":
     main()

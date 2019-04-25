@@ -33,7 +33,7 @@ class Processor:
 
     """
 
-    def __init__(self, training, unseen):
+    def __init__(self, training, unseen, seed):
         """ Constructor
 
             It is worth to notice that both training and unseen are nothing more nothing less
@@ -41,11 +41,22 @@ class Processor:
             If you want them to be copies of respective objects, use .copy() on each parameter.
 
         """
+        columns = ['ID', 'Year_Birth', 'Education', 'Marital_Status', 'Income', 'Kidhome',
+       'Teenhome', 'Dt_Customer', 'Recency', 'MntWines', 'MntFruits',
+       'MntMeatProducts', 'MntFishProducts', 'MntSweetProducts',
+       'MntGoldProds', 'NumDealsPurchases', 'NumWebPurchases',
+       'NumCatalogPurchases', 'NumStorePurchases', 'NumWebVisitsMonth',
+       'AcceptedCmp3', 'AcceptedCmp4', 'AcceptedCmp5', 'AcceptedCmp1',
+       'AcceptedCmp2', 'Complain', 'Response']
+        if type(training) != pd.core.frame.DataFrame:
+            training = pd.DataFrame(training, columns = columns)
+        if type(unseen) != pd.core.frame.DataFrame:
+            testing = pd.DataFrame(unseen, columns = columns)
         self.training = training #.copy() to mantain a copy of the object
         self.unseen = unseen #.copy() to mantain a copy of the object
         self.report = []
         self.cat_vars = ['Education', 'Marital_Status', 'AcceptedCmp3', 'AcceptedCmp4', 'AcceptedCmp5',
-                    'AcceptedCmp1', 'AcceptedCmp2', 'Complain', 'Response']
+                    'AcceptedCmp1', 'AcceptedCmp2', 'Complain']
 
         #missing columns 'Income' 'num_days_customer'
 
@@ -55,13 +66,18 @@ class Processor:
                          'NumCatalogPurchases', 'NumStorePurchases',
                          'NumWebVisitsMonth', 'Response']
 
-        self._generate_dummies()
+
 
         #Deal with missing values
         self._drop_missing_values()
 
         #Outlier Treatment
-        self._impute_num_missings_mean()
+        self._manual_outlier_removal()
+
+        #Generate Dummy variables
+        self._generate_dummies()
+
+        #Normalization
         self._normalize()
         print("Preprocessing complete!")
 
@@ -96,9 +112,24 @@ class Processor:
             self.unseen[c] = self.unseen[c].astype('category')
 
     def _drop_missing_values(self):
-        self.report.append('_generate_dummies')
+        self.report.append('_drop_missing_values')
         self.training.dropna(inplace=True)
         self.unseen.dropna(inplace=True)
+
+    def convert_numeric_labelling(self,var):
+        temp = self.training[var].dropna().copy()
+        unique = temp.drop_duplicates()
+        var_dict = {}
+        for ix,value in enumerate(unique):
+            var_dict[value] = ix
+        self.training[var] = self.training[var].apply(lambda x: var_dict[x] if x in var_dict.keys() else None)
+        return var_dict
+
+    def revert_numeric_labelling(self,var,var_dict):
+        cat_dict = {}
+        for k,v in var_dict.items():
+            cat_dict[v] = k
+        self.training[var] = self.training[var].apply(lambda x: cat_dict[x] if x in cat_dict.keys() else None)
 
     def _impute_num_missings_mean(self):
         self.report.append('_impute_num_missings_mean')
@@ -116,10 +147,15 @@ class Processor:
                 self.training[column] = self._imputer.fit_transform(self.training[column].values.reshape(-1,1))
                 self.unseen[column] = self._imputer.transform(self.unseen[column].values.reshape(-1,1))
 
-        self._imputer = SimpleImputer(missing_values=np.nan, strategy='most_frequent')
-        self.training[self.cat_vars] = self._imputer.fit_transform(self.training[self.cat_vars].values.reshape(-1,1))
-        self.unseen[self.cat_vars] = self._imputer.transform(self.unseen[self.cat_vars].values.reshape(-1,1))
-
+        for var in self.cat_vars:
+            var_dict = self.convert_numeric_labelling(var)
+            try:
+                self._imputer = SimpleImputer(missing_values=np.nan, strategy='most_frequent')
+                self.training[var] = self._imputer.fit_transform(self.training[var].values.reshape(-1,1))
+                self.unseen[var] = self._imputer.transform(self.unseen[var].values.reshape(-1,1))
+            except:
+                print("Error on var:", var)
+            self.revert_numeric_labelling(var,var_dict)
     # DEALING WITH OUTLIERS
     ### UNIVARIATE OUTLIER DETECTION
     def _filter_df_by_std(self):
@@ -259,7 +295,7 @@ class Processor:
     """ CONTAMINATION: The amount of contamination of the data set, i.e. the proportion of outliers in the data set. 
     Used when fitting to define the threshold on the decision function. """
 
-    def isolation_forest(self, contamination):
+    def isolation_forest(self, contamination, seed):
         self.report.append('isolation_forest')
         clf = IsolationForest(max_samples=100, contamination=contamination, random_state=np.random.RandomState(42))
         clf.fit(self.training)
@@ -279,6 +315,7 @@ class Processor:
         return outliers
 
     def extended_isolation_forest(self,contamination):
+
         self.report.append('extended_isolation_forest')
         if_eif = iso.iForest(self.training.values, ntrees=100, sample_size=256, ExtensionLevel=2)
         anomaly_scores = if_eif.compute_paths(X_in=self.training.values)
