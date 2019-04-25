@@ -17,6 +17,12 @@ from scipy.spatial.distance import cdist
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import OneHotEncoder
 from scipy.stats import norm, kstest
+from collections import defaultdict
+from collections import Counter
+from numpy.random import RandomState
+from imblearn.over_sampling import SMOTENC,SMOTE,ADASYN
+
+
 
 class Processor:
     """ Performs data preprocessing
@@ -35,6 +41,17 @@ class Processor:
             If you want them to be copies of respective objects, use .copy() on each parameter.
 
         """
+        columns = ['ID', 'Year_Birth', 'Education', 'Marital_Status', 'Income', 'Kidhome',
+       'Teenhome', 'Dt_Customer', 'Recency', 'MntWines', 'MntFruits',
+       'MntMeatProducts', 'MntFishProducts', 'MntSweetProducts',
+       'MntGoldProds', 'NumDealsPurchases', 'NumWebPurchases',
+       'NumCatalogPurchases', 'NumStorePurchases', 'NumWebVisitsMonth',
+       'AcceptedCmp3', 'AcceptedCmp4', 'AcceptedCmp5', 'AcceptedCmp1',
+       'AcceptedCmp2', 'Complain', 'Response']
+        if type(training) != pd.core.frame.DataFrame:
+            training = pd.DataFrame(training, columns = columns)
+        if type(unseen) != pd.core.frame.DataFrame:
+            testing = pd.DataFrame(unseen, columns = columns)
         self.training = training #.copy() to mantain a copy of the object
         self.unseen = unseen #.copy() to mantain a copy of the object
         self.report = []
@@ -210,67 +227,69 @@ class Processor:
     def _z_score_outlier_detection(self, treshold):
         self.report.append('_z_score_outlier_detection')
         ''' Only for numerical data'''
-
-        zscores = zscore(self.training[self.numerical_var])
-        #Count number of non outliers per line
-        temp = np.sum((zscores < treshold) & (zscores > -treshold), axis=1)
-        #If the number of outliers per line is equal to the columns of numerical
-        #Keep line
-        self.training = pd.DataFrame(self.training.values[temp == len(self.numerical_var),:],columns=self.training.columns)
-
-        #data = self.training
-        #df = pd.DataFrame(zscore(data[self.numerical_var]), columns=self.numerical_var)
-        #df.index = data.index
-        #temp = np.sum(df > treshold, axis=1)
-        #my_outliers = temp[temp > 0].index
-        #temp = np.sum(df < -treshold, axis=1)
-        #my_outliers.append(temp[temp > 0].index)
-        #return np.unique(my_outliers)
-
-    def _boxplot_outlier_detection(self):
-        self.report.append('_boxplot_outlier_detection')
-        zscores = zscore(self.training[self.numerical_var])
-        iqr_ = iqr(zscores)
-        #Count number of non outliers per line
-        temp = np.sum(zscores < 1.5*iqr_, axis=1)
-        #If the number of outliers per line is equal to the columns of numerical
-        #Keep line
-        self.training = pd.DataFrame(self.training.values[temp == len(self.numerical_var),:],columns=self.training.columns)
-        '''
-        box_plot_outliers = []
-        ids = []
+        z_score_outliers = {}
         for var in self.numerical_var:
-            df = pd.Series(zscore(data[var]))
-            df.index = data.index
-            for record in df.index:
-                #Should'nt we need to check if zscore is less then 1.5*iqr?
-                if df[df.index == record].iloc[0] > 1.5 * iqr(df):
-                    if record not in box_plot_outliers:
-                        box_plot_outliers.append(record)
-                else:
-                    ids.append(record)
+            if var != 'Response':
+                df = pd.Series(zscore(self.training[var]))
+                df.index = self.training.index
+                for ind in df[np.abs(df) > treshold].index:
+                    try:
+                        z_score_outliers[ind] = z_score_outliers[ind] + ' ' + var
+                    except:
+                        z_score_outliers[ind] = var
+        for key in z_score_outliers.keys(): z_score_outliers[key] = z_score_outliers[key].split(' ')
+        return z_score_outliers
 
-        self.training = self.training.iloc[set(ids)]
+
+
+
+    def _boxplot_outlier_detection(self,treshold=1.5):
+        self.report.append('_boxplot_outlier_detection')
+
+        box_plot_outliers = {}
+        for var in self.numerical_var:
+            if var != 'Response':
+                df = pd.Series(zscore(self.training[var]))
+                df.index = self.training.index
+                Q1 = np.percentile(df, 25)
+                Q3 = np.percentile(df, 75)
+                for record in df.index:
+                    if df[df.index == record].iloc[0] > (Q3 + treshold * iqr(df)) or df[df.index == record].iloc[0] < (
+                            Q1 - treshold * iqr(df)):
+                        if record not in box_plot_outliers:
+                            try:
+                                box_plot_outliers[record] = box_plot_outliers[record] + ' ' + var
+                            except:
+                                box_plot_outliers[record] = var
+        for key in box_plot_outliers.keys(): box_plot_outliers[key] = box_plot_outliers[key].split(' ')
+
         return box_plot_outliers
-        '''
 
-    def robust_z_score_method(self,df, treshold):
+
+    def robust_z_score_method(self, treshold=3.5):
         self.report.append('robust_z_score_method')
-        #What is ds???
-        ds = self.rm_df
-        numerical = self.numerical_var
-        df = df[numerical]
-        med = df.median()
-        MAD = [np.median(np.abs(ds[var] - ds[var].median())) for var in df]
-        df = 0.6745 * (df - df.median()) / MAD
-        pd.options.mode.use_inf_as_na = True
-        df = df.fillna(0)
+        
+        robust_zs_outliers = {}
+        df = self.training[self.numerical_var]
+        size = len(df)
+        for var in self.numerical_var:
+            if var != 'Response':
+                ds = pd.Series(df[var])
+                ds.index = df.index
+                median = np.median(ds)
+                MAD = np.median([np.abs(ds.iloc[i] - median) for i in range(size)])
+                modified_z_scores = pd.Series([0.6745 * (ds.iloc[i] - median) / MAD for i in range(size)])
+                modified_z_scores.index = ds.index
 
-        def RZ_outliers():
-            outliers = np.sum(df > treshold, axis=1)
-            return outliers[outliers > 0].index
+                for ind in modified_z_scores[np.abs(modified_z_scores) > treshold].index:
+                    try:
+                        robust_zs_outliers[ind] = robust_zs_outliers[ind] + ' ' + var
+                    except:
+                        robust_zs_outliers[ind] = var
 
-        return df, RZ_outliers()
+        for key in robust_zs_outliers.keys(): robust_zs_outliers[key] = robust_zs_outliers[key].split(' ')
+
+        return robust_zs_outliers
 
     #### MULTIVARIATE OUTLIER DETECTION
     """ CONTAMINATION: The amount of contamination of the data set, i.e. the proportion of outliers in the data set. 
@@ -278,27 +297,32 @@ class Processor:
 
     def isolation_forest(self, contamination, seed):
         self.report.append('isolation_forest')
-        ds = self.training[self.numerical_var]
-        clf = IsolationForest(max_samples=100, contamination=contamination, random_state=seed)
-        clf.fit(ds)
-        self.training = pd.DataFrame(self.training.values[clf.predict(ds) == 1,:],columns=self.training.columns)
-        #outliers_isoflorest = pd.Series(outliers_isoflorest)
-        #outliers_isoflorest.index = ds.index
-        #return outliers_isoflorest[outliers_isoflorest == -1]
+        clf = IsolationForest(max_samples=100, contamination=contamination, random_state=np.random.RandomState(42))
+        clf.fit(self.training)
+        outliers_isoflorest = clf.predict(self.training)
+        outliers_isoflorest = pd.Series(outliers_isoflorest)
+        outliers_isoflorest.index = self.training.index
+        return np.array(outliers_isoflorest[outliers_isoflorest == -1].index)
 
-    ## CUIDADO AGAIN COM OS PARAMETROS
-    # INSTALAR EIF NO PIP
-    def extended_isolation_forest(self):
+    def uni_boxplot_outlier_det(self,series_):
+        outliers = []
+        Q1 = np.percentile(series_, 25)
+        Q3 = np.percentile(series_, 75)
+        for record in series_.index:
+            if series_[series_.index == record].iloc[0] > (Q3 + 1.5 * iqr(series_)) or series_[series_.index == record].iloc[
+                0] < (Q1 - 1.5 * iqr(series_)):
+                outliers.append(record)
+        return outliers
+
+    def extended_isolation_forest(self,contamination):
+
         self.report.append('extended_isolation_forest')
-        #Do values need to be normalized
-        ds = self.training
-        if_eif = iso.iForest(norm_encoded_ds.values, ntrees=100, sample_size=256, ExtensionLevel=2)
-        anomaly_scores = if_eif.compute_paths(X_in=norm_encoded_ds.values)
+        if_eif = iso.iForest(self.training.values, ntrees=100, sample_size=256, ExtensionLevel=2)
+        anomaly_scores = if_eif.compute_paths(X_in=self.training.values)
         anomaly_scores = pd.Series(anomaly_scores)
-        anomaly_scores.index = norm_encoded_ds.index
-        anomaly_scores.sort_values(ascending=False, inplace=True)
-        return anomaly_scores
+        anomaly_scores.index = self.training.index
 
+        return uni_boxplot_outlier_det(anomaly_scores)
 
     # Getting the columns (variables) means
     def mahalanobis_distance_outlier(self):
@@ -344,13 +368,12 @@ class Processor:
             min_samples=minpoints,
             n_jobs=-1)
 
-        self.training = pd.DataFrame(self.training.values[outlier_detection.fit_predict(ds) != -1, :], columns=self.training.columns)
+        clusters = outlier_detection.fit_predict(ds)
         # Seing the number of identified noise (outliers)
-        #np.sum(clusters == -1)
         # Identifying the outliers:
-        #clusters = pd.Series(clusters)
-        #clusters.index = ds.index
-        #return clusters.sort_values()
+        clusters = pd.Series(clusters)
+        clusters.index = ds.index
+        return clusters[clusters == -1].index
 
 
     def elliptic_envelope_out(self, contamination):
@@ -359,21 +382,19 @@ class Processor:
         elliptic = EllipticEnvelope(contamination=contamination)
         elliptic.fit(ds)
         results = elliptic.predict(ds)
-        self.training = pd.DataFrame(self.training.values[results == 1, :],columns=self.training.columns)
-        #outlier_elliptic = pd.Series(results)
-        #outlier_elliptic.index = ds.index
-        #return outlier_elliptic[outlier_elliptic == -1]
+        outlier_elliptic = pd.Series(results)
+        outlier_elliptic.index = ds.index
+        return outlier_elliptic[outlier_elliptic == -1].index
 
 
     def local_outlier_factor(self, n_neighbors = None, contamination = None):
         self.report.append('local_outlier_factor')
         ds = self.training[self.numerical_var]
-        lof = LocalOutlierFactor(n_neighbors=10, contamination=0.1)
+        lof = LocalOutlierFactor(n_neighbors=n_neighbors, contamination=contamination)
         outiler_lof = lof.fit_predict(ds)
-        self.training = pd.DataFrame(self.training.values[outiler_lof == 1, :], columns=self.training.columns)
-        #outiler_lof = pd.Series(outiler_lof)
-        #outiler_lof.index = ds.index
-        #return outiler_lof[outiler_lof == -1]
+        outiler_lof = pd.Series(outiler_lof)
+        outiler_lof.index = ds.index
+        return outiler_lof[outiler_lof == -1].index
 
     def one_class_svm(self):
 
@@ -381,9 +402,8 @@ class Processor:
         ds = self.training[self.numerical_var]
         oneclasssvm = svm.OneClassSVM()
         oneclasssvm_outliers = oneclasssvm.fit_predict(ds)
-        self.training = pd.DataFrame(self.training.values[oneclasssvm_outliers == 1, :], columns=self.training.columns)
-        #oneclasssvm_outliers.index = ds.index
-        #return oneclasssvm_outliers[oneclasssvm_outliers == -1]
+        oneclasssvm_outliers.index = ds.index
+        return oneclasssvm_outliers[oneclasssvm_outliers == -1].index
 
     def cooks_distance_outlier(self, vd):
         self.report.append('cooks_distance_outlier')
@@ -393,15 +413,101 @@ class Processor:
         m = sm.OLS(X, Y).fit()
         infl = m.get_influence()
         sm_fr = infl.summary_frame()
-        return sm_fr['cooks_d'].sort_values(ascending=False)
+        return uni_boxplot_outlier_det(sm_fr['cooks_d'].sort_values(ascending=False))
 
     def outlier_rank(self,*arg):
+        '''this function returns two things. First, the number of times each row appears as outlier. The second is the full dictionary with the indexes and the columns where they
+        appear as outliers.
+        '''
         self.report.append('outlier_rank')
         IDS = []
+        ids = []
+        keys = []
         for array in arg:
-            IDS = [id_ for sublist in IDS for id_ in sublist]
-        counts = [IDS.count(i) for i in IDS]
-        return dict(zip(IDS, counts))
+            if isinstance(array, dict):
+                keys.extend([key for key in array.keys()])
+            else:
+                if (len(np.array(array).shape)) < 2:
+                    ids.extend([id_ for id_ in array])
+                else:
+                    IDS.extend([id_ for sublist in array for id_ in sublist])
+
+        full = IDS + keys + ids
+        counts = [full.count(i) for i in full]
+
+        pass_for_full = [thing for thing in arg]
+
+        def get_full_outlier_dict(full_dict):
+            dd = defaultdict(list)
+            for d in ([arg_ for arg_ in full_dict]):
+                for key, value in d.items():
+                    dd[key].append(value)
+            dd = dict(dd)
+            for key in dd.keys():
+                # flattning the values of the dicts
+                dd[key] = [item for sublist in dd[key] for item in sublist]
+                # removing the duplicated variables where a key is outlier
+                dd[key] = list(dict.fromkeys(dd[key]))
+            return dd
+
+        outlier_info_dict = get_full_outlier_dict(pass_for_full)
+
+        return dict(sorted(dict(zip(full, counts)).items(), key=lambda x: x[1], reverse=True)), outlier_info_dict
+
+    def decide_on_and_get_outliers(self,outlier_rank_result, treshold):
+        '''pass the ranking here and choose the records that appear more than  treshold times to be our outliers'''
+        outliers = list({key for (key, value) in outlier_rank_result[0].items() if value > treshold})
+        outlier_info = dict([(k, v) for (k, v) in outlier_rank_result[1].items() if k in outliers])
+        return outlier_info
+
+    def uni_iqr_outlier_smoothing(self,DOAGO_results, ds):
+        '''use the info gatheres from the previous function (decide on and get outliers) and smoothes the detected outliers.'''
+        self.report.append('uni_iqr_outlier_smoothing')
+        novo_ds = ds.copy()
+        for key in DOAGO_results.keys():
+            for var in DOAGO_results[key]:
+                if ds[var][ds.index == key].values > np.mean(ds[var]):
+                    novo_ds[var][novo_ds.index == key] = np.percentile(ds[var], 75) + 1.5 * iqr(ds[var])
+
+                else:
+                    novo_ds[var][novo_ds.index == key] = np.percentile(ds[var], 25) - 1.5 * iqr(ds[var])
+        return novo_ds
+
+    def SMOTE_NC(self,ds, random_state, cat_index_list):
+        self.report.append('SMOTE_NC_sampling')
+        Y = ds["Response"]
+        X = ds.drop(columns=["Response"])
+        sm = SMOTENC(random_state=random_state, categorical_features=cat_index_list)
+        X_res, Y_res = sm.fit_resample(X, Y)
+        sampled_ds = pd.DataFrame(X_res)
+        sampled_ds['Response'] = Y_res
+        # sampled_ds.index=ds.index
+        sampled_ds.columns = ds.columns
+        return sampled_ds
+
+    def SMOTE_sampling(self,ds, random_state_):
+        self.report.append('SMOTE_sampling')
+        Y = ds["Response"]
+        X = ds.drop(columns=["Response"])
+        sm = SMOTE(random_state=random_state_)
+        X_res, Y_res = sm.fit_resample(X, Y)
+        sampled_ds = pd.DataFrame(X_res)
+        sampled_ds['Response'] = Y_res
+        # sampled_ds.index=ds.index
+        sampled_ds.columns = ds.columns
+        return round(sampled_ds, 2)
+
+    def Adasyn_sampling(self,ds, random_state_):
+        self.report.append('Adasyn_sampling')
+        Y = ds["Response"]
+        X = ds.drop(columns=["Response"])
+        ada = ADASYN(random_state=random_state_)
+        X_res, Y_res = ada.fit_resample(X, Y)
+        sampled_ds = pd.DataFrame(X_res)
+        sampled_ds['Response'] = Y_res
+        # sampled_ds.index=ds.index
+        sampled_ds.columns = ds.columns
+        return round(sampled_ds, 2)
 
     ### NORMALIZATION
     def _normalize(self):

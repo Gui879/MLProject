@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import datetime
 import re
+
+from scipy.stats import stats
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.decomposition import FactorAnalysis
 from sklearn.decomposition import FastICA
@@ -10,7 +12,10 @@ from sklearn.decomposition import PCA
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.feature_selection import RFE, SelectKBest, f_classif
 from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import KBinsDiscretizer, MinMaxScaler
+
 from ga_feature_selection.feature_selection_ga import FeatureSelectionGA
+
 
 
 class FeatureEngineer:
@@ -317,19 +322,22 @@ class FeatureEngineer:
         res = dict(sorted(res.items(), key=lambda kv: kv[1], reverse=True))
         return np.array(pd.DataFrame(res, index=[0]).T.head(n).index)
 
-    def feature_selection(*arg):
+    def feature_selection_rank(*arg):
         VARS = []
         for array in arg:
             VARS.append(array)
         VARS = [id_ for sublist in VARS for id_ in sublist]
         counts = [VARS.count(i) for i in VARS]
-        return dict(zip(VARS, counts))
+        return dict(sorted(dict(zip(VARS, counts)).items(), key=lambda x: x[1], reverse=True))
+
 
     def correlation_feature_selection(self):
-        for var in self.training.columns:
-            correlation = self.training[var,'Response'].corr()
-            #To be done
-
+        feature_order = self.training.columns.drop('Response',axis = 0)
+        for var in range(len(feature_order)):
+            correlation = self.training[feature_order[var],'Response'].corr()
+            feature_order[var] = (var,correlation)
+        feature_order.sort(key=lambda x: x[1], reverse = True)
+        return feature_order
 
     def correlation_based_feature_selection(self,feature_importance_function):
         #Returns variables sorted from most importance to least important
@@ -355,12 +363,8 @@ class FeatureEngineer:
                                                self.training.loc[:, self.training.columns != "Response"].values,
                                                self.training["Response"].values)
         feature_selection.generate(n_pop=20, ngen=5)
-        print('=========================')
-        print(self.training.loc[:, self.training.columns != "Response"].columns)
-        print(np.where(feature_selection.best_ind==1))
-        print(feature_selection.best_ind)
-        print(self.training.loc[:, self.training.columns != "Response"].columns[np.where(feature_selection.best_ind==1)])
-        return self.training.loc[:, self.training.columns != "Response"].columns[np.where(feature_selection.best_ind==1)]
+        
+        return self.training.loc[:, self.training.columns != "Response"].columns[np.where(np.array(feature_selection.best_ind)==1)]
 
 
 
