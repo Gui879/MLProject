@@ -1,15 +1,16 @@
 import sys
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, StratifiedKFold
 from ml_bc_pipeline.data_loader import Dataset
 from ml_bc_pipeline.data_preprocessing import Processor
 from ml_bc_pipeline.feature_engineering import FeatureEngineer
-from ml_bc_pipeline.model import grid_search_MLP, assess_generalization_auroc, decision_tree, naive_bayes, logistic_regression, xgboost, ensemble
+from ml_bc_pipeline.model import gradientBoosting,grid_search_MLP, assess_generalization_auroc, decision_tree, naive_bayes, logistic_regression, xgboost, ensemble, adaboost
 from datetime import datetime
 from os import listdir
 import json
 
+cv_splits=5
 
 def main():
 
@@ -20,6 +21,7 @@ def main():
 
     global pipeline
     pipeline = {}
+
     def report(best_estimator_, best_params_ = None,model_name = "None", print_graph = False):
         auprc, stats = assess_generalization_auroc(best_estimator_, fe.unseen, print_graph)
         stats['model_type'] = model_name
@@ -33,12 +35,21 @@ def main():
         print("AUROC: {:.2f}".format(auprc))
 
     for seed in range(5):
+
         # +++++++++++++++++ 1) load and prepare the data
         ds = Dataset("ml_project1_data.xlsx").rm_df
         # +++++++++++++++++ 2) split into train and unseen
-
         DF_train, DF_unseen = train_test_split(ds.copy(), test_size=0.2, stratify=ds["Response"], random_state=seed)
+
+        #skf = StratifiedKFold(n_splits=cv_splits, shuffle=True)
+
+        #for train_index, test_index in skf.split(DF_train[DF_train.columns!='Reponse'],DF_train['Response']):
+
+        #train = DF_train.ix[train_index]
+        #test = DF_train.ix[test_index]
         # +++++++++++++++++ 3) preprocess, based on train
+
+        
         pr = Processor(DF_train, DF_unseen)
         pipeline['preprocessing'] = pr.report
         # +++++++++++++++++ 4) feature engineering
@@ -96,6 +107,20 @@ def main():
         report(xgb,model_name=xgboost.__name__)
 
         # =====================================
+        # ADABOOST
+        # =====================================
+
+        adaboost_ = adaboost(fe.training, fe.unseen, seed)
+        report(adaboost_, model_name='adaboost')
+        
+        # =====================================
+        # GRADIENTBOOSTING
+        # =====================================
+
+        gradientboost_ = gradientBoosting(fe.training, fe.unseen, seed)
+        report(gradientboost_, model_name='gradientboost')
+
+        # =====================================
         # ENSEMBLE
         # =====================================
 
@@ -109,30 +134,37 @@ def main():
 
         ensemble_estimator = ensemble(fe.training, classifiers, seed)
         report(ensemble_estimator, classifiers.keys(), ensemble.__name__)
+        
+
+
+
 
     log.to_csv('Logs/' + 'version' + str(test_version)+ '.csv')
     with open('Pipelines/version'+str(test_version)+'.txt', 'w') as file:
         file.write(json.dumps(pipeline))
 
-    def calculate_averages(variable_list):
-        global log
-        data = log
-        models = data['model_type'].unique()
-        columns_ = ['model'] + variable_list
-        print(models)
-        averages = pd.DataFrame()
-        for model in models:
-            var_averages = [model]
-            for variable in variable_list:
-                var_averages.append(np.average(data[data['model_type'] == model][variable]))
-            if averages.shape[1] == 0:
-                averages = pd.DataFrame([var_averages], columns = columns_)
-            else:
-                averages = averages.append(pd.DataFrame([var_averages], columns = columns_))
-        return averages
 
     averages = calculate_averages(['auroc','precision','recall','f1_score','best_threshold', 'best_profit'])
     averages.to_csv('Averages/version' + str(test_version) + '.csv')
 
 if __name__ == "__main__":
     main()
+
+
+
+def calculate_averages(variable_list):
+    global log
+    data = log
+    models = data['model_type'].unique()
+    columns_ = ['model'] + variable_list
+    print(models)
+    averages = pd.DataFrame()
+    for model in models:
+        var_averages = [model]
+        for variable in variable_list:
+            var_averages.append(np.average(data[data['model_type'] == model][variable]))
+        if averages.shape[1] == 0:
+            averages = pd.DataFrame([var_averages], columns = columns_)
+        else:
+            averages = averages.append(pd.DataFrame([var_averages], columns = columns_))
+    return averages
