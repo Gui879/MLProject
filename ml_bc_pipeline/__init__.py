@@ -231,7 +231,7 @@ def main():
 
 
 
-        log.to_csv('Logs/' + 'version' + str(test_version)+ '.csv')
+        log.to_csv('Logs/' + 'version' + str(test_version)+'_'+str(seed)+'.csv')
         with open('Pipelines/version'+str(test_version)+'_'+str(seed)+'.txt', 'w') as file:
             file.write(json.dumps(pipeline))
 
