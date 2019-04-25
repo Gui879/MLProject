@@ -15,13 +15,12 @@ import statsmodels.api as sm
 from sklearn import svm
 from scipy.spatial.distance import cdist
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.preprocessing import OneHotEncoder
 from scipy.stats import norm, kstest
 from collections import defaultdict
 from collections import Counter
 from numpy.random import RandomState
 from imblearn.over_sampling import SMOTENC,SMOTE,ADASYN
-
+from sklearn.preprocessing import OneHotEncoder
 
 
 class Processor:
@@ -41,20 +40,10 @@ class Processor:
             If you want them to be copies of respective objects, use .copy() on each parameter.
 
         """
-        columns = ['ID', 'Year_Birth', 'Education', 'Marital_Status', 'Income', 'Kidhome',
-       'Teenhome', 'Dt_Customer', 'Recency', 'MntWines', 'MntFruits',
-       'MntMeatProducts', 'MntFishProducts', 'MntSweetProducts',
-       'MntGoldProds', 'NumDealsPurchases', 'NumWebPurchases',
-       'NumCatalogPurchases', 'NumStorePurchases', 'NumWebVisitsMonth',
-       'AcceptedCmp3', 'AcceptedCmp4', 'AcceptedCmp5', 'AcceptedCmp1',
-       'AcceptedCmp2', 'Complain', 'Response']
-        if type(training) != pd.core.frame.DataFrame:
-            training = pd.DataFrame(training, columns = columns)
-        if type(unseen) != pd.core.frame.DataFrame:
-            testing = pd.DataFrame(unseen, columns = columns)
         self.training = training #.copy() to mantain a copy of the object
         self.unseen = unseen #.copy() to mantain a copy of the object
         self.report = []
+        self.seed = seed
         self.cat_vars = ['Education', 'Marital_Status', 'AcceptedCmp3', 'AcceptedCmp4', 'AcceptedCmp5',
                     'AcceptedCmp1', 'AcceptedCmp2', 'Complain']
 
@@ -68,49 +57,23 @@ class Processor:
 
 
 
+
         #Deal with missing values
-        self._drop_missing_values()
+        self._impute_missing_values()
 
         #Outlier Treatment
         self._manual_outlier_removal()
 
-        #Generate Dummy variables
-        self._generate_dummies()
-
         #Normalization
         self._normalize()
+
+        #DATASET BALANCING
+        self.SMOTE_NC()
+
         print("Preprocessing complete!")
 
+
     #DEALING WITH MISSING VALUES
-    def _generate_dummies(self):
-        self.report.append('_generate_dummies')
-        features_to_enconde = ['Education', 'Marital_Status']
-        columns = []
-        idxs = []
-        control = 0
-        for column in features_to_enconde:
-            for index in range(len(self.training[column].unique()) - 1):
-                columns.append(column + '_' + self.training[column].unique()[index])
-                idxs.append(control)
-                control = control + 1
-            control = control + 1
-
-        # encode categorical features from training data as a one-hot numeric array.
-        enc = OneHotEncoder(handle_unknown='ignore')
-        Xtr_enc = enc.fit_transform(self.training[features_to_enconde]).toarray()
-        # update training data
-        df_temp = pd.DataFrame(Xtr_enc[:, idxs], index=self.training.index, columns=columns)
-        self.training = pd.concat([self.training, df_temp], axis=1)
-        for c in columns:
-            self.training[c] = self.training[c].astype('category')
-        # use the same encoder to transform unseen data
-        Xun_enc = enc.transform(self.unseen[features_to_enconde]).toarray()
-        # update unseen data
-        df_temp = pd.DataFrame(Xun_enc[:, idxs], index=self.unseen.index, columns=columns)
-        self.unseen = pd.concat([self.unseen, df_temp], axis=1)
-        for c in columns:
-            self.unseen[c] = self.unseen[c].astype('category')
-
     def _drop_missing_values(self):
         self.report.append('_drop_missing_values')
         self.training.dropna(inplace=True)
@@ -131,8 +94,8 @@ class Processor:
             cat_dict[v] = k
         self.training[var] = self.training[var].apply(lambda x: cat_dict[x] if x in cat_dict.keys() else None)
 
-    def _impute_num_missings_mean(self):
-        self.report.append('_impute_num_missings_mean')
+    def _impute_missing_values(self):
+        self.report.append('_impute_missing_values')
         for column in self.training[self.numerical_var]:
             data = self.training[column]
             loc, scale = norm.fit(data)
@@ -156,6 +119,8 @@ class Processor:
             except:
                 print("Error on var:", var)
             self.revert_numeric_labelling(var,var_dict)
+
+
     # DEALING WITH OUTLIERS
     ### UNIVARIATE OUTLIER DETECTION
     def _filter_df_by_std(self):
@@ -297,7 +262,7 @@ class Processor:
 
     def isolation_forest(self, contamination, seed):
         self.report.append('isolation_forest')
-        clf = IsolationForest(max_samples=100, contamination=contamination, random_state=np.random.RandomState(42))
+        clf = IsolationForest(max_samples=100, contamination=contamination, random_state=seed)
         clf.fit(self.training)
         outliers_isoflorest = clf.predict(self.training)
         outliers_isoflorest = pd.Series(outliers_isoflorest)
@@ -473,23 +438,24 @@ class Processor:
                     novo_ds[var][novo_ds.index == key] = np.percentile(ds[var], 25) - 1.5 * iqr(ds[var])
         return novo_ds
 
-    def SMOTE_NC(self,ds, random_state, cat_index_list):
+    #SAMPLING
+    def SMOTE_NC(self):
         self.report.append('SMOTE_NC_sampling')
-        Y = ds["Response"]
-        X = ds.drop(columns=["Response"])
-        sm = SMOTENC(random_state=random_state, categorical_features=cat_index_list)
+        Y = self.training["Response"]
+        X = self.training.drop(columns=["Response"])
+        sm = SMOTENC(random_state=self.seed, categorical_features=self.cat_vars)
         X_res, Y_res = sm.fit_resample(X, Y)
         sampled_ds = pd.DataFrame(X_res)
         sampled_ds['Response'] = Y_res
         # sampled_ds.index=ds.index
-        sampled_ds.columns = ds.columns
-        return sampled_ds
+        sampled_ds.columns = self.training.columns
+        self.training = sampled_ds.columns
 
-    def SMOTE_sampling(self,ds, random_state_):
+    def SMOTE_sampling(self,ds):
         self.report.append('SMOTE_sampling')
         Y = ds["Response"]
         X = ds.drop(columns=["Response"])
-        sm = SMOTE(random_state=random_state_)
+        sm = SMOTE(random_state=self.seed)
         X_res, Y_res = sm.fit_resample(X, Y)
         sampled_ds = pd.DataFrame(X_res)
         sampled_ds['Response'] = Y_res
@@ -497,11 +463,11 @@ class Processor:
         sampled_ds.columns = ds.columns
         return round(sampled_ds, 2)
 
-    def Adasyn_sampling(self,ds, random_state_):
+    def Adasyn_sampling(self,ds):
         self.report.append('Adasyn_sampling')
         Y = ds["Response"]
         X = ds.drop(columns=["Response"])
-        ada = ADASYN(random_state=random_state_)
+        ada = ADASYN(random_state=self.seed)
         X_res, Y_res = ada.fit_resample(X, Y)
         sampled_ds = pd.DataFrame(X_res)
         sampled_ds['Response'] = Y_res
