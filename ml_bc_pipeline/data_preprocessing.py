@@ -300,7 +300,7 @@ class Processor:
     # Getting the columns (variables) means
     def mahalanobis_distance_outlier(self):
         self.report.append('mahalanobis_distance_outlier')
-        ds = self.training.drop(columns='Response')
+        ds = self.training.drop(columns='Response').astype(float)
         var_means = ds.mean(axis=0).values.reshape(1, -1)
         # Getting the inverse of the covariance matrix
         try:
