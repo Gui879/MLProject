@@ -28,7 +28,7 @@ class FeatureEngineer:
         print(self.training.dtypes)
         print("First:",self.training.shape)
         self._extract_business_features()
-        self.lda_extraction()
+        print(len(self.correlation_feature_ordering()))
         self.linear_regression_selection('Response',10)
 
 
@@ -346,7 +346,7 @@ class FeatureEngineer:
         feature_order = self.training.drop('Response',axis=1).columns
         for var in range(len(feature_order)):
             try:
-                correlation = np.abs(self.training[[feature_order[var],'Response']].corr().iloc[0,1])
+                correlation = np.abs(self.training[[feature_order[var],'Response']].astype(float).corr().iloc[0,1])
                 vars_corr[feature_order[var]] = correlation
             except:
                 pass

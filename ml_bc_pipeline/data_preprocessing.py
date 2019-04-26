@@ -57,8 +57,6 @@ class Processor:
 
         #Deal with missing values
         self._impute_missing_values()
-<<<<<<< HEAD
-
 
 
         #Outlier Treatment
@@ -69,7 +67,7 @@ class Processor:
 
         #Normalization
         self._normalize()
-=======
+
 
         #Normalization
         self._normalize()
@@ -81,7 +79,6 @@ class Processor:
         #Balancing
         self.SMOTE_NC()
 
->>>>>>> b7a7a194759078f0903276ad26aba050673b0762
         print("Preprocessing complete!")
 
 
