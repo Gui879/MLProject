@@ -4,7 +4,7 @@ import pandas as pd
 import datetime
 import re
 
-from scipy.stats import stats
+from scipy.stats import stats, chi2_contingency
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.decomposition import FactorAnalysis
 from sklearn.decomposition import FastICA
@@ -12,6 +12,7 @@ from sklearn.decomposition import PCA
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.feature_selection import RFE, SelectKBest, f_classif
 from sklearn.linear_model import LogisticRegression
+import statsmodels.api as sm
 from sklearn.preprocessing import KBinsDiscretizer, MinMaxScaler
 
 from ga_feature_selection.feature_selection_ga import FeatureSelectionGA
@@ -25,11 +26,14 @@ class FeatureEngineer:
         self.report=[]
         self.training = training
         self.unseen = unseen
+        print(self.training.dtypes)
         print("First:",self.training.shape)
         self._extract_business_features()
-        self.anova_F_selection('Response',10)
+
+        self.linear_regression_selection('Response',10)
+
         print("Feature Engeneering Completed!")
-        self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
+        #self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
 
 
     def _extract_business_features(self):
@@ -43,7 +47,7 @@ class FeatureEngineer:
             dataset["RatioStorePurchases"] = dataset["NumStorePurchases"] / dataset["Total_Purchases"]
 
             dataset["Age"] = datetime.datetime.now().year - dataset["Year_Birth"]
-            dataset["TotalAcceptedCampaigns"] = dataset["AcceptedCmp1"]+dataset["AcceptedCmp2"]+dataset["AcceptedCmp3"]+dataset["AcceptedCmp4"]+dataset["AcceptedCmp5"]
+            dataset["TotalAcceptedCampaigns"] = dataset["AcceptedCmp1"].astype(int)+dataset["AcceptedCmp2"].astype(int)+dataset["AcceptedCmp3"].astype(int)+dataset["AcceptedCmp4"].astype(int)+dataset["AcceptedCmp5"].astype(int)
             # Total amount spent
             dataset["TotalMoneySpent"] = dataset["MntWines"] + dataset["MntFruits"] + dataset["MntMeatProducts"] + dataset["MntFishProducts"] + dataset["MntSweetProducts"] + dataset["MntGoldProds"]
             # Calculating the ratios of money spent per category
@@ -156,7 +160,7 @@ class FeatureEngineer:
                 # 3) 1) 3) obtain contingency table
                 cont_tab = pd.crosstab(feature_bin, self.training[target], margins=False)
                 # 3) 1) 4) compute Chi-Squared test
-                chi_test_value = stats.chi2_contingency(cont_tab)[0]
+                chi_test_value = chi2_contingency(cont_tab)[0]
                 # 3) 1) 5) choose the best so far Box-Cox transformation based on Chi-Squared test
                 if chi_test_value > best_test_value:
                     best_test_value, best_trans_label, best_power_trans = chi_test_value, trans_key, feature_trans
@@ -167,21 +171,23 @@ class FeatureEngineer:
             self.unseen[feature] = np.round(self._bx_cx_trans_dict[best_trans_label](self.unseen[feature]), 4)
         self.box_cox_features = num_features_BxCx
 
+
     ########FEATURE SELECTION################################
     def rank_features_chi_square(self, continuous_flist, categorical_flist):
         self.report.append('rank_features_chi_square')
         chisq_dict = {}
-        if continuous_flist:
+
+        if len(continuous_flist)>0:
             bindisc = KBinsDiscretizer(n_bins=10, encode='ordinal', strategy="uniform")
             for feature in continuous_flist:
                 feature_bin = bindisc.fit_transform(self.training[feature].values[:, np.newaxis])
                 feature_bin = pd.Series(feature_bin[:, 0], index=self.training.index)
-                cont_tab = pd.crosstab(feature_bin, self.training["DepVar"], margins=False)
-                chisq_dict[feature] = stats.chi2_contingency(cont_tab.values)[0:2]
-        if categorical_flist:
+                cont_tab = pd.crosstab(feature_bin, self.training["Response"], margins=False)
+                chisq_dict[feature] = chi2_contingency(cont_tab.values)[0:2]
+        if len(categorical_flist)>0:
             for feature in categorical_flist:
-                cont_tab = pd.crosstab(self.training[feature], self.training["DepVar"], margins=False)
-                chisq_dict[feature] = stats.chi2_contingency(cont_tab.values)[0:2]
+                cont_tab = pd.crosstab(self.training[feature], self.training["Response"], margins=False)
+                chisq_dict[feature] = chi2_contingency(cont_tab.values)[0:2]
 
         df_chisq_rank = pd.DataFrame(chisq_dict, index=["Chi-Squared", "p-value"]).transpose()
         df_chisq_rank.sort_values("Chi-Squared", ascending=False, inplace=True)
@@ -202,7 +208,7 @@ class FeatureEngineer:
         X = self.training[vd]
         for var in self.training.drop(columns=vd).columns:
             Y = self.training[var]
-            model = self.training.OLS(X, Y).fit()
+            model = sm.OLS(X, Y).fit()
             predictions = model.predict(X)
             reg_results = reg_results.append({'variable': var, 'Coef': model.params[0], 'std_err': model.bse[0],
                                               'pvalue': model.pvalues[0], 'adj_R2': model.rsquared_adj},

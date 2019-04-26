@@ -56,7 +56,7 @@ class Processor:
 
 
         #Deal with missing values
-        self._drop_missing_values()
+        self._impute_missing_values()
 
 
 
@@ -64,12 +64,10 @@ class Processor:
         outliers = self._boxplot_outlier_detection()
         self.training.drop(outliers,axis = 0,inplace = True)
 
+        self.mahalanobis_distance_outlier()
 
         #Normalization
         self._normalize()
-
-        self.mahalanobis_distance_outlier()
-
         print("Preprocessing complete!")
 
 
@@ -117,6 +115,9 @@ class Processor:
             self._imputer = SimpleImputer(missing_values=np.nan, strategy='most_frequent')
             self.training[var] = self._imputer.fit_transform(self.training[var].values.reshape(-1,1))
             self.unseen[var] = self._imputer.transform(self.unseen[var].values.reshape(-1,1))
+
+            self.training[var] = self.training[var].astype('category')
+            self.unseen[var] = self.unseen[var].astype('category')
 
             self.revert_numeric_labelling(var,var_dict)
 

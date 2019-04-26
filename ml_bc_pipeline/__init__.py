@@ -174,16 +174,16 @@ def main():
 
         for train_index, test_index in skf.split(DF_train.loc[:, DF_train.columns != "Response"],DF_train['Response']):
 
-            train = DF_train.ix[train_index]
-            test = DF_train.ix[test_index]
-
+            train = DF_train.copy().iloc[train_index]
+            test = DF_train.copy().iloc[test_index]
+            print('split')
             pr = Processor(train, test, seed)
             pipeline['preprocessing'] = pr.report
-
+            print('processor')
             # +++++++++++++++++ 4) feature engineering
             fe = FeatureEngineer(pr.training, pr.unseen)
             pipeline['feature_engineering'] = fe.report
-
+            print('feature_engineering')
             # =====================================
             # NEURAL NETWORK
             # =====================================
