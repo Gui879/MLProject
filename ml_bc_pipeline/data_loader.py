@@ -13,6 +13,7 @@ class Dataset:
 
     def __init__(self, full_path):
         self.rm_df = pd.read_excel(full_path)
+        self.rm_df.set_index('ID',inplace=True)
         self._drop_duplicates(full_path)
         self._drop_metadata_features()
         #self._drop_doubleback_features()
@@ -46,52 +47,9 @@ class Dataset:
         self.rm_df.drop(features_to_enconde,axis=1,inplace = True)
 
     def _drop_duplicates(self,full_path):
-
-        ds = self.rm_df
-        ds = ds.drop(columns=["ID", "Response"])
-        da = pd.read_excel(full_path)
-
-
-        # Colunas do dataset numa lista e retirar a primeira, aka ID
-        colunas = list(da)
-        colunas.pop(0)
-
-        # Obter o count e a lista com os ID's dos repetidos com o target.
-        target_count = da.groupby(colunas)['ID'].count()
-        target_list = da.groupby(colunas)['ID'].apply(list)
-        target = pd.concat([target_count, target_list], axis=1)
-        target.columns = ['count', 'lista']
-
-        # Obter o count e a lista com os ID's dos repetidos sem o target.
-        no_target_count = da.groupby(list(ds))['ID'].count()
-        no_target_list = da.groupby(list(ds))['ID'].apply(list)
-        no_target = pd.concat([no_target_count, no_target_list], axis=1)
-        no_target.columns = ['count', 'lista']
-
-        # Comparar os resultados do com target e do sem target e fazer a intersecao dos mesmos. Porque se estao iguais
-        # nos dois lados, significa que nunca ha casos em que os Response sao diferentes.
-        no_target_set = set(map(tuple, no_target.lista))
-        target_set = set(map(tuple, target.lista))
-        id_intercept = no_target_set.intersection(target_set)
-        id_intercept = list(id_intercept)
-
-        # Juntar os ID's numa lista para depois ficar apenas com estes casos
-        ids = []
-        for i in id_intercept:
-            for j in i:
-                ids.append(j)
-
-        # Fiz isto para evitar perder os IDS, usando um merge atraves do index
-        frame = pd.read_excel("ml_project1_data.xlsx")
-        frame = frame.loc[frame['ID'].isin(ids)]
-        sem_ID = frame.drop(columns=["ID"])
-        sem_ID = sem_ID.drop_duplicates(keep="first")
-        frame_ID = frame["ID"]
-        merged = sem_ID.merge(frame_ID.to_frame(), left_index=True, right_index=True, how='inner')
-        merged.index = merged['ID']
-        ds = merged.drop(columns='ID').copy()
-        self.rm_df=ds
-        del merged
+        print(self.rm_df.shape)
+        self.rm_df.drop_duplicates(inplace = True)
+        self.rm_df.drop_duplicates(subset = list(set(self.rm_df.columns) - set('Response')), keep = False)
 
     def _drop_metadata_features(self):
         #To be used for profit calculations
