@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import datetime
 import re
+
+from scipy.stats import stats
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.decomposition import FactorAnalysis
 from sklearn.decomposition import FastICA
@@ -10,6 +12,9 @@ from sklearn.decomposition import PCA
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.feature_selection import RFE, SelectKBest, f_classif
 from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import KBinsDiscretizer, MinMaxScaler
+
+from ga_feature_selection.feature_selection_ga import FeatureSelectionGA
 
 
 
@@ -23,6 +28,7 @@ class FeatureEngineer:
         print("First:",self.training.shape)
         self._extract_business_features()
         print("Feature Engeneering Completed!")
+        self.ga_feature_selection(LogisticRegression())
 
 
     def _extract_business_features(self):
@@ -46,7 +52,7 @@ class FeatureEngineer:
             dataset["RatioFishProducts"] = dataset["MntFishProducts"] / dataset["TotalMoneySpent"]
             dataset["RatioSweetProducts"] = dataset["MntSweetProducts"] / dataset["TotalMoneySpent"]
             dataset["RatioGoldProdataset"] = dataset["MntGoldProds"] / dataset["TotalMoneySpent"]
-
+            dataset["MoneyPerPurchase"] = dataset["TotalMoneySpent"] / dataset["Total_Purchases"]
             # Changing income to 2 years
             dataset["Income2Years"] = dataset["Income"] * 2
 
@@ -351,4 +357,16 @@ class FeatureEngineer:
                     to_delete.append(j)
 
         self.training = self.training[variables_list]
+
+
+    def ga_feature_selection(self,model):
+
+        feature_selection = FeatureSelectionGA(model,
+                                               self.training.loc[:, self.training.columns != "Response"].values,
+                                               self.training["Response"].values)
+        feature_selection.generate(n_pop=20, ngen=5)
+        
+        return self.training.loc[:, self.training.columns != "Response"].columns[np.where(np.array(feature_selection.best_ind)==1)]
+
+
 
