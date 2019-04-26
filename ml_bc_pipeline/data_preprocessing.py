@@ -20,7 +20,8 @@ from collections import defaultdict
 from collections import Counter
 from numpy.random import RandomState
 from imblearn.over_sampling import SMOTENC,SMOTE,ADASYN
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder,PowerTransformer
+
 
 
 class Processor:
@@ -55,8 +56,6 @@ class Processor:
 
         #Deal with missing values
         self._impute_missing_values()
-<<<<<<< HEAD
-
 
         #Outlier Treatment
         outliers = self._boxplot_outlier_detection()
@@ -76,9 +75,8 @@ class Processor:
         outliers = self.mahalanobis_distance_outlier()
         self.training.drop(outliers,axis = 0,inplace = True)
         #Balancing
-        self.SMOTE_NC()
-
-
+        #self.SMOTE_NC()
+        
         print("Preprocessing complete!")
 
 
@@ -503,6 +501,24 @@ class Processor:
         # sampled_ds.index=ds.index
         sampled_ds.columns = ds.columns
         return round(sampled_ds, 2)
+
+    def power_transformation(self):
+        pt=PowerTransformer()
+        pt.fit(self.training.select_dtypes(exclude='category'))
+        temp = pd.DataFrame(pt.transform(self.training.select_dtypes(exclude='category')))
+        temp.index=self.training.select_dtypes(exclude='category').index
+        temp.columns=self.training.select_dtypes(exclude='category').columns
+        for col in self.training.select_dtypes(include='category'):
+            temp[col]=self.training[col]
+        self.training=temp
+        del temp
+        temp=pd.DataFrame(pt.transform(self.unseen.select_dtypes(exclude='category')))
+        temp.index = self.unseen.select_dtypes(exclude='category').index
+        temp.columns = self.unseen.select_dtypes(exclude='category').columns
+        for col in self.unseen.select_dtypes(include='category'):
+            temp[col]=self.unseen[col]
+        self.unseen=temp
+        print(temp)
 
     ### NORMALIZATION
     def _normalize(self):

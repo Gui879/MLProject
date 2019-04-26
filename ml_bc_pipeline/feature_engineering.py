@@ -13,7 +13,7 @@ from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.feature_selection import RFE, SelectKBest, f_classif
 from sklearn.linear_model import LogisticRegression
 import statsmodels.api as sm
-from sklearn.preprocessing import KBinsDiscretizer, MinMaxScaler
+from sklearn.preprocessing import KBinsDiscretizer, MinMaxScaler,PowerTransformer
 
 from ga_feature_selection.feature_selection_ga import FeatureSelectionGA
 
@@ -36,7 +36,7 @@ class FeatureEngineer:
         #self.lda_extraction()
         #self.linear_regression_selection('Response',10)
         self.pca_extraction()
-        self.correlation_based_feature_selection(self.correlation_feature_ordering)
+        #self.correlation_based_feature_selection(self.correlation_feature_ordering)
 
         print("Feature Engeneering Completed!")
         #self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
