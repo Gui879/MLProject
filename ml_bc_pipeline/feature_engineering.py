@@ -28,7 +28,7 @@ class FeatureEngineer:
         print("First:",self.training.shape)
         self._extract_business_features()
         print("Feature Engeneering Completed!")
-        self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
+        #self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
 
 
     def _extract_business_features(self):

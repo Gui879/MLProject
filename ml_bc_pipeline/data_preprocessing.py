@@ -56,9 +56,7 @@ class Processor:
 
 
         #Deal with missing values
-        self._drop_missing_values()
-
-
+        self._impute_missing_values()
 
         #Outlier Treatment
         outliers = self._boxplot_outlier_detection()
@@ -120,7 +118,6 @@ class Processor:
             self.unseen[var] = self._imputer.transform(self.unseen[var].values.reshape(-1,1))
 
             self.revert_numeric_labelling(var,var_dict)
-
 
     # DEALING WITH OUTLIERS
     ### UNIVARIATE OUTLIER DETECTION
@@ -453,38 +450,16 @@ class Processor:
     def SMOTE_NC(self):
         self.report.append('SMOTE_NC_sampling')
         Y = self.training["Response"]
-        X = self.training.drop(columns=["Response"])
-        sm = SMOTENC(random_state=self.seed, categorical_features=self.cat_vars)
+        #X = self.training.drop(columns=["Response"])
+        X = self.training.drop('Response',axis = 1)
+        cat_cols = X[self.cat_vars].columns
+        sm = SMOTENC(random_state=self.seed, categorical_features=[cat_cols.get_loc(col) for col in cat_cols])
         X_res, Y_res = sm.fit_resample(X, Y)
         sampled_ds = pd.DataFrame(X_res)
         sampled_ds['Response'] = Y_res
         # sampled_ds.index=ds.index
         sampled_ds.columns = self.training.columns
-        self.training = sampled_ds.columns
-
-    def SMOTE_sampling(self,ds):
-        self.report.append('SMOTE_sampling')
-        Y = ds["Response"]
-        X = ds.drop(columns=["Response"])
-        sm = SMOTE(random_state=self.seed)
-        X_res, Y_res = sm.fit_resample(X, Y)
-        sampled_ds = pd.DataFrame(X_res)
-        sampled_ds['Response'] = Y_res
-        # sampled_ds.index=ds.index
-        sampled_ds.columns = ds.columns
-        return round(sampled_ds, 2)
-
-    def Adasyn_sampling(self,ds):
-        self.report.append('Adasyn_sampling')
-        Y = ds["Response"]
-        X = ds.drop(columns=["Response"])
-        ada = ADASYN(random_state=self.seed)
-        X_res, Y_res = ada.fit_resample(X, Y)
-        sampled_ds = pd.DataFrame(X_res)
-        sampled_ds['Response'] = Y_res
-        # sampled_ds.index=ds.index
-        sampled_ds.columns = ds.columns
-        return round(sampled_ds, 2)
+        self.training = sampled_ds
 
     ### NORMALIZATION
     def _normalize(self):
