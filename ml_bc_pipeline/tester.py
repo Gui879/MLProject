@@ -24,7 +24,7 @@ def main():
     training['Response'] = y_train
     testing['Response'] = y_test
     pr = Processor(training,testing,seed = 0)
-
+    fe = FeatureEngineer(pr.training,pr.unseen,seed = 0)
     '''
     training = pd.read_csv('train_data.csv')
     testing = pd.read_csv('test_data.csv')

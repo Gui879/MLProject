@@ -20,7 +20,7 @@ from ga_feature_selection.feature_selection_ga import FeatureSelectionGA
 
 class FeatureEngineer:
 
-    def __init__(self, training, unseen):
+    def __init__(self, training, unseen, seed):
         self._rank = {}
         self.report=[]
         self.training = training
@@ -29,8 +29,9 @@ class FeatureEngineer:
         #self.linear_regression_selection('Response',10)
         #self.lda_extraction()
         #self.linear_regression_selection('Response',10)
-        self.pca_extraction()
-        self.correlation_based_feature_selection(self.correlation_feature_ordering)
+        components = self.pca_extraction()
+        print(components)
+        #self.correlation_based_feature_selection(self.correlation_feature_ordering)
 
         print("Feature Engeneering Completed!")
         #self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
