@@ -76,7 +76,7 @@ class Processor:
         self.training.drop(outliers,axis = 0,inplace = True)
         #Balancing
         #self.SMOTE_NC()
-        
+
         print("Preprocessing complete!")
 
 

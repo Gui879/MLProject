@@ -20,7 +20,7 @@ from ga_feature_selection.feature_selection_ga import FeatureSelectionGA
 
 class FeatureEngineer:
 
-    def __init__(self, training, unseen):
+    def __init__(self, training, unseen, seed):
         self._rank = {}
         self.report=[]
         self.training = training
@@ -28,14 +28,14 @@ class FeatureEngineer:
         self._extract_business_features()
 
 
-        print(len(self.correlation_feature_ordering()))
-        self.linear_regression_selection('Response',10)
-
-
         #self.linear_regression_selection('Response',10)
         #self.lda_extraction()
         #self.linear_regression_selection('Response',10)
         self.pca_extraction()
+
+        components = self.pca_extraction()
+        print(components)
+
         #self.correlation_based_feature_selection(self.correlation_feature_ordering)
 
         print("Feature Engeneering Completed!")
@@ -77,7 +77,9 @@ class FeatureEngineer:
             dataset["Income2Years"] = dataset["Income"] * 2
 
             # Calculating Effort Rate
-            dataset["EffortRate"] = dataset["TotalMoneySpent"] / dataset["Income2Years"]
+            a = dataset["TotalMoneySpent"]
+            b = dataset["Income2Years"]
+            dataset["EffortRate"] = np.divide(a, b, out=np.zeros_like(a), where=b != 0)
 
             # All kidataset
             dataset["TotalKids"] = dataset["Teenhome"] + dataset["Kidhome"]
@@ -126,14 +128,22 @@ class FeatureEngineer:
         indep_ds = ica.transform(ds)
         return indep_comp, indep_ds
 
-    def pca_extraction(self):
+    def pca_extraction(self,threshold = 0.8):
         self.report.append('pca_extraction')
         ds = self.training
         pca = PCA()
         pca.fit(ds)
         components = pd.Series(pca.explained_variance_, index=range(1, ds.shape[1] + 1))
-        components = components * 100
-        return components
+        components = components
+        explained = 0
+        final_components = 0
+        for component in components:
+            explained = explained + component
+            final_components = final_components +1
+            if explained >= threshold:
+                break
+        print(self.training.shape, pca.components_.shape)
+        self.training = pca.components_
 
     def _drop_constant_features(self):
         self.report.append('_drop_constant_features')
