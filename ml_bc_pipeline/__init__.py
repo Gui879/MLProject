@@ -18,10 +18,9 @@ def main():
     # PARAMETERS
     # ===========================
 
-    seed = 1
     cv_splits = 5
-    kfold_simple = True
-    stratified_kfold=False
+    kfold_simple = False
+    stratified_kfold=True
 
     test_version = len(listdir('Logs'))
 
@@ -63,29 +62,17 @@ def main():
     # +++++++++++++++++ 1) load and prepare the data
     ds = Dataset("ml_project1_data.xlsx").rm_df
     # +++++++++++++++++ 2) split into train and unseen
-    DF_train, DF_unseen = train_test_split(ds.copy(), test_size=0.2, stratify=ds["Response"], random_state=seed)
-
-
-    #class_weights = class_weight.compute_class_weight('balanced', np.unique(DF_train['Response']), DF_train['Response'])
-    #class_weights
-
-    #skf = StratifiedKFold(n_splits=cv_splits, shuffle=True)
-
-    #for train_index, test_index in skf.split(DF_train[DF_train.columns!='Reponse'],DF_train['Response']):
-
-    #train = DF_train.ix[train_index]
-    #test = DF_train.ix[test_index]
+    DF_train, DF_unseen = train_test_split(ds.copy(), test_size=0.2, stratify=ds["Response"], random_state=0)
 
     # +++++++++++++++++ 3) preprocess, based on train
+    pr = Processor(DF_train, DF_unseen, 0)
+    pipeline['preprocessing'] = pr.report
+
+    # +++++++++++++++++ 4) feature engineering
+    fe = FeatureEngineer(pr.training, pr.unseen)
+    pipeline['feature_engineering'] = fe.report
 
     for seed in range(5):
-
-        pr = Processor(DF_train, DF_unseen, seed)
-        pipeline['preprocessing'] = pr.report
-
-        # +++++++++++++++++ 4) feature engineering
-        fe = FeatureEngineer(pr.training, pr.unseen)
-        pipeline['feature_engineering'] = fe.report
 
         # =====================================
         # NEURAL NETWORK
@@ -165,7 +152,7 @@ def main():
         ensemble_estimator = ensemble(fe.training, classifiers)
         report(ensemble_estimator, fe.unseen, classifiers.keys(), ensemble.__name__)
 
-
+        #Change partition
         if kfold_simple:
             skf = KFold(n_splits=cv_splits, shuffle=True)
         elif stratified_kfold:

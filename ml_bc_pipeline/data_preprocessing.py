@@ -57,6 +57,7 @@ class Processor:
 
         #Deal with missing values
         self._impute_missing_values()
+<<<<<<< HEAD
 
 
 
@@ -68,6 +69,19 @@ class Processor:
 
         #Normalization
         self._normalize()
+=======
+
+        #Normalization
+        self._normalize()
+        #Outlier Treatment
+        #outliers = self._boxplot_outlier_detection()
+        outliers = self.mahalanobis_distance_outlier()
+        self.training.drop(outliers,axis = 0,inplace = True)
+
+        #Balancing
+        self.SMOTE_NC()
+
+>>>>>>> b7a7a194759078f0903276ad26aba050673b0762
         print("Preprocessing complete!")
 
 
@@ -120,7 +134,8 @@ class Processor:
             self.unseen[var] = self.unseen[var].astype('category')
 
             self.revert_numeric_labelling(var,var_dict)
-
+        self.training[self.cat_vars] =self.training[self.cat_vars].astype('category')
+        self.unseen[self.cat_vars] = self.unseen[self.cat_vars].astype('category')
 
     # DEALING WITH OUTLIERS
     ### UNIVARIATE OUTLIER DETECTION
@@ -301,7 +316,8 @@ class Processor:
     # Getting the columns (variables) means
     def mahalanobis_distance_outlier(self):
         self.report.append('mahalanobis_distance_outlier')
-        ds = self.training.drop(columns='Response').astype(float)
+        ds = self.training.copy()[self.numerical_var]
+        #ds[self.cat_vars] = ds[self.cat_vars].astype(float)
         var_means = ds.mean(axis=0).values.reshape(1, -1)
         # Getting the inverse of the covariance matrix
         try:
@@ -319,20 +335,20 @@ class Processor:
         MDs = cdist(var_means, ds, 'mahalanobis', VI=inv_cov_matrix)
         MDs = pd.Series([distance for sublist in MDs for distance in sublist], index=ds.index)
 
-        def find_outliers(MDs):
-            treshold = 3.
+        def find_outliers(MDs, percent = 0.03):
+            treshold = 1.5
             std = np.std(MDs)
             k = treshold * std
             m = np.mean(MDs)
-            mahalanobis_outliers = []
-            for index in MDs.index:
-                if (MDs[index] >= m + k) or (MDs[index] <= m - k):
-                    if index not in mahalanobis_outliers:
-                        mahalanobis_outliers.append(index)  # index of the outlier
-            return np.array(mahalanobis_outliers)
-
+            l_outliers = MDs[MDs >= m+k]
+            l_outliers = l_outliers - (m+k)
+            h_outliers = MDs[MDs <= m-k]
+            h_outliers = np.abs(h_outliers + (m-k))
+            t_outliers = pd.concat([l_outliers,h_outliers])
+            t_outliers.sort_values(ascending= False, inplace=True)
+            n = int(MDs.shape[0] * percent)
+            return t_outliers.index[:n]
         return find_outliers(MDs)
-
 
     def dbscan_outlier_detection(self, minpoints=None, radius=None):
         self.report.append('dbscan_outlier_detection')
@@ -350,7 +366,6 @@ class Processor:
         clusters.index = ds.index
         return clusters[clusters == -1].index
 
-
     def elliptic_envelope_out(self, contamination):
         self.report.append('elliptic_envelope_out')
         ds = self.training[self.numerical_var]
@@ -360,7 +375,6 @@ class Processor:
         outlier_elliptic = pd.Series(results)
         outlier_elliptic.index = ds.index
         return outlier_elliptic[outlier_elliptic == -1].index
-
 
     def local_outlier_factor(self, n_neighbors = None, contamination = None):
         self.report.append('local_outlier_factor')
@@ -402,7 +416,6 @@ class Processor:
                 else:
                     novo_ds[var][novo_ds.index == key] = np.percentile(ds[var], 25) - 1.5 * iqr(ds[var])
         return novo_ds
-
 
     def outlier_rank(self,smoothing,treshold,*arg):
         '''this function returns two things. First, the number of times each row appears as outlier. The second is the full dictionary with the indexes and the columns where they
@@ -456,21 +469,20 @@ class Processor:
         outlier_info = dict([(k, v) for (k, v) in outlier_rank_result[1].items() if k in outliers])
         return outlier_info
 
-
-
     #SAMPLING
     def SMOTE_NC(self):
         self.report.append('SMOTE_NC_sampling')
         Y = self.training["Response"]
-        X = self.training.drop(columns=["Response"])
-        sm = SMOTENC(random_state=self.seed, categorical_features=self.cat_vars)
+        #X = self.training.drop(columns=["Response"])
+        X = self.training.drop('Response',axis = 1)
+        cat_cols = X[self.cat_vars].columns
+        sm = SMOTENC(random_state=self.seed, categorical_features=[cat_cols.get_loc(col) for col in cat_cols])
         X_res, Y_res = sm.fit_resample(X, Y)
         sampled_ds = pd.DataFrame(X_res)
         sampled_ds['Response'] = Y_res
         # sampled_ds.index=ds.index
         sampled_ds.columns = self.training.columns
-        self.training = sampled_ds.columns
-
+        self.training = sampled_ds
 
     def SMOTE_sampling(self,ds):
         self.report.append('SMOTE_sampling')
