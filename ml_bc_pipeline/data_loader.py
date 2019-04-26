@@ -25,12 +25,6 @@ class Dataset:
 
 
     def _drop_duplicates(self,full_path):
-        """Nós temos dois tipos de dados repetidos. Dados repetidos com o Response diferente e dados repetidos com o Response
-        igual. O que significa que temos de ter cuidado, porque têm de ser tratados de maneira diferente
-        Primeiramente vamos eliminar os dados que estão repetidos com Response diferente. No máximo temos 3 casos repetidos,
-        pelo que tendo 2 para 1, não representa uma diferença significativamente grande para ficar com 1 individuo do grupo que
-        tem mais. Depois, com os dados que ficamos, vamos ver os que têm duplicados, e neste caso vamos ficar sempre com
-        um deles. Por default, o primeiro que aparece."""
 
         ds = self.rm_df
         ds = ds.drop(columns=["ID", "Response"])
@@ -52,8 +46,8 @@ class Dataset:
         no_target = pd.concat([no_target_count, no_target_list], axis=1)
         no_target.columns = ['count', 'lista']
 
-        ## Comparar os resultados do "com target" e do "sem target" e fazer a intersecção dos mesmos. Porque se estão iguais
-        ## nos dois lados, significa que nunca há casos em que os Response são diferentes.
+        # Comparar os resultados do com target e do sem target e fazer a intersecao dos mesmos. Porque se estao iguais
+        # nos dois lados, significa que nunca ha casos em que os Response sao diferentes.
         no_target_set = set(map(tuple, no_target.lista))
         target_set = set(map(tuple, target.lista))
         id_intercept = no_target_set.intersection(target_set)
@@ -137,7 +131,7 @@ class Dataset:
         self.rm_df["Response"] = self.rm_df["Response"].astype('category')
 
     def _days_since_customer(self):
-        """ Encodes Dt_Customer (nº days since customer)
+        """ Encodes Dt_Customer (n days since customer)
 
             Similarly to the label encoder, we have to transform the Dt_Customer in order to feed numerical
             quantities into our ML algorithms. Here we encode Dt_Customer into number the of days since, for
