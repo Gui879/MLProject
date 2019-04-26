@@ -18,7 +18,6 @@ from sklearn.preprocessing import KBinsDiscretizer, MinMaxScaler
 from ga_feature_selection.feature_selection_ga import FeatureSelectionGA
 
 
-
 class FeatureEngineer:
 
     def __init__(self, training, unseen):
@@ -27,8 +26,11 @@ class FeatureEngineer:
         self.training = training
         self.unseen = unseen
         self._extract_business_features()
-
         #self.linear_regression_selection('Response',10)
+        #self.lda_extraction()
+        #self.linear_regression_selection('Response',10)
+        self.pca_extraction()
+        self.correlation_based_feature_selection(self.correlation_feature_ordering)
 
         print("Feature Engeneering Completed!")
         #self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
@@ -88,13 +90,11 @@ class FeatureEngineer:
             dataset.replace([np.inf, -np.inf], np.nan, inplace=True)
             dataset.fillna(0, inplace=True)
 
-
-
     def lda_extraction(self):
         self.report.append('lda_extraction')
         ds = self.training
         y = self.training['Response']
-        clf = LinearDiscriminantAnalysis(solver="eigen")
+        clf = LinearDiscriminantAnalysis(solver="svd")
         lda = clf.fit(ds, y)
         lda_ds = lda.transform(ds)
         lda_coef = lda.coef_
@@ -325,15 +325,15 @@ class FeatureEngineer:
         res = dict(sorted(res.items(), key=lambda kv: kv[1], reverse=True))
         return np.array(pd.DataFrame(res, index=[0]).T.head(n).index)
 
-    def extra_Trees_Classifier(self, vd, n):
+    def extra_Trees_Classifier(self, n):
         self.report.append('extra_Trees_Classifier')
         ''' choosing number of features based on their importance'''
         ds = self.training
-        X = ds.drop(columns=vd)
-        Y = ds[vd]
+        X = ds.drop(columns='Response')
+        Y = ds['Response']
         model = ExtraTreesClassifier()
         model.fit(X, Y)
-        res = dict(zip(ds.drop(columns=vd).columns, model.feature_importances_))
+        res = dict(zip(ds.drop(columns='Response').columns, model.feature_importances_))
         res = dict(sorted(res.items(), key=lambda kv: kv[1], reverse=True))
         return np.array(pd.DataFrame(res, index=[0]).T.head(n).index)
 
@@ -351,12 +351,17 @@ class FeatureEngineer:
 
     def correlation_feature_ordering(self):
         self.report.append('Correlation_Feature_ordering')
-        feature_order = self.training.drop('Response',axis = 1).columns
+        vars_corr = {}
+        feature_order = self.training.drop('Response',axis=1).columns
         for var in range(len(feature_order)):
-            correlation = self.training[feature_order[var],'Response'].corr()
-            feature_order[var] = (var,correlation)
-        feature_order.sort(key=lambda x: x[1], reverse = True)
-        return feature_order
+            try:
+                correlation = np.abs(self.training[[feature_order[var],'Response']].corr().iloc[0,1])
+                vars_corr[feature_order[var]] = correlation
+            except:
+                pass
+
+        return dict(sorted(vars_corr.items(), key=lambda kv: kv[1], reverse=True))
+
 
     def correlation_based_feature_selection(self,feature_importance_function):
         self.report.append('Correlation_Based_Feature_selection')
