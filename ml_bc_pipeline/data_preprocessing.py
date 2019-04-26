@@ -58,9 +58,12 @@ class Processor:
         #Deal with missing values
         self._drop_missing_values()
 
+
+
         #Outlier Treatment
         outliers = self._boxplot_outlier_detection()
         self.training.drop(outliers,axis = 0,inplace = True)
+
 
         #Normalization
         self._normalize()
@@ -134,7 +137,6 @@ class Processor:
         mask = training_num.apply(axis=0, func=_filter_ser_by_std, n_stdev=3.0)
         training_num[mask] = np.NaN
         self.training[training_num.columns] = training_num
-
         return list(training_num.columns)
 
     def _manual_outlier_removal(self):
@@ -240,7 +242,7 @@ class Processor:
         n = int(self.training.shape[0] * percent)
         return [int(x[0]) for x in box_plot_outliers[:n]]
 
-    def robust_z_score_method(self, treshold=3.5):
+    def robust_z_score_method(self, treshold=5):
         self.report.append('robust_z_score_method')
         
         robust_zs_outliers = {}
@@ -262,7 +264,6 @@ class Processor:
                         robust_zs_outliers[ind] = var
 
         for key in robust_zs_outliers.keys(): robust_zs_outliers[key] = robust_zs_outliers[key].split(' ')
-
         return robust_zs_outliers
 
     #### MULTIVARIATE OUTLIER DETECTION
@@ -291,12 +292,11 @@ class Processor:
     def extended_isolation_forest(self,contamination):
 
         self.report.append('extended_isolation_forest')
-        if_eif = iso.iForest(self.training.values, ntrees=100, sample_size=256, ExtensionLevel=2)
+        if_eif = iso.iForest(self.training.astype('float64').values, ntrees=100, sample_size=256, ExtensionLevel=2)
         anomaly_scores = if_eif.compute_paths(X_in=self.training.values)
         anomaly_scores = pd.Series(anomaly_scores)
         anomaly_scores.index = self.training.index
-
-        return uni_boxplot_outlier_det(anomaly_scores)
+        return self.uni_boxplot_outlier_det(anomaly_scores)
 
     # Getting the columns (variables) means
     def mahalanobis_distance_outlier(self):
@@ -330,7 +330,9 @@ class Processor:
                     if index not in mahalanobis_outliers:
                         mahalanobis_outliers.append(index)  # index of the outlier
             return np.array(mahalanobis_outliers)
-
+        print('=============')
+        print(len(find_outliers()))
+        print('=============')
         return find_outliers()
 
     def dbscan_outlier_detection(self, minpoints=None, radius=None):
@@ -376,18 +378,18 @@ class Processor:
         ds = self.training[self.numerical_var]
         oneclasssvm = svm.OneClassSVM()
         oneclasssvm_outliers = oneclasssvm.fit_predict(ds)
-        oneclasssvm_outliers.index = ds.index
+        oneclasssvm_outliers = pd.DataFrame(oneclasssvm_outliers, index = ds.index)
         return oneclasssvm_outliers[oneclasssvm_outliers == -1].index
 
     def cooks_distance_outlier(self, vd):
         self.report.append('cooks_distance_outlier')
         df = self.training
-        X = df[vd]
-        Y = df.drop(columns=vd)
+        X = df[vd].astype('float64').values
+        Y = df.drop(columns=vd).astype('float64').values
         m = sm.OLS(X, Y).fit()
         infl = m.get_influence()
         sm_fr = infl.summary_frame()
-        return uni_boxplot_outlier_det(sm_fr['cooks_d'].sort_values(ascending=False))
+        return self.uni_boxplot_outlier_det(sm_fr['cooks_d'].sort_values(ascending=False))
 
     def outlier_rank(self,*arg):
         '''this function returns two things. First, the number of times each row appears as outlier. The second is the full dictionary with the indexes and the columns where they
