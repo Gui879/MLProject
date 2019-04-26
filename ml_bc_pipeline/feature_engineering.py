@@ -27,6 +27,7 @@ class FeatureEngineer:
         self.unseen = unseen
         print("First:",self.training.shape)
         self._extract_business_features()
+        self.anova_F_selection('Response',10)
         print("Feature Engeneering Completed!")
         #self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
 
@@ -321,13 +322,16 @@ class FeatureEngineer:
         res = dict(sorted(res.items(), key=lambda kv: kv[1], reverse=True))
         return np.array(pd.DataFrame(res, index=[0]).T.head(n).index)
 
-    def feature_selection_rank(*arg):
+    def feature_selection_rank(self,treshold, *arg):
         VARS = []
         for array in arg:
             VARS.append(array)
         VARS = [id_ for sublist in VARS for id_ in sublist]
-        counts = [VARS.count(i) for i in VARS]
-        return dict(sorted(dict(zip(VARS, counts)).items(), key=lambda x: x[1], reverse=True))
+        ratios = [VARS.count(i) / len(arg) for i in VARS]
+        ratios = dict(sorted(dict(zip(VARS, ratios)).items(), key=lambda x: x[1], reverse=True))
+        kept_vars = list({k for (k, v) in a.items() if v > treshold})
+        self.training = self.training[kept_vars]
+        self.unseen = self.unseen[kept_vars]
 
 
     def correlation_feature_ordering(self):

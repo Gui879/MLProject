@@ -66,8 +66,7 @@ class Processor:
         #Normalization
         self._normalize()
 
-        #DATASET BALANCING
-        self.SMOTE_NC()
+        self.mahalanobis_distance_outlier()
 
         print("Preprocessing complete!")
 
@@ -298,7 +297,7 @@ class Processor:
     # Getting the columns (variables) means
     def mahalanobis_distance_outlier(self):
         self.report.append('mahalanobis_distance_outlier')
-        ds = self.training
+        ds = self.training.drop(columns='Response').astype(float)
         var_means = ds.mean(axis=0).values.reshape(1, -1)
         # Getting the inverse of the covariance matrix
         try:
@@ -316,7 +315,7 @@ class Processor:
         MDs = cdist(var_means, ds, 'mahalanobis', VI=inv_cov_matrix)
         MDs = pd.Series([distance for sublist in MDs for distance in sublist], index=ds.index)
 
-        def find_outliers():
+        def find_outliers(MDs):
             treshold = 3.
             std = np.std(MDs)
             k = treshold * std
@@ -327,10 +326,9 @@ class Processor:
                     if index not in mahalanobis_outliers:
                         mahalanobis_outliers.append(index)  # index of the outlier
             return np.array(mahalanobis_outliers)
-        print('=============')
-        print(len(find_outliers()))
-        print('=============')
-        return find_outliers()
+
+        return find_outliers(MDs)
+
 
     def dbscan_outlier_detection(self, minpoints=None, radius=None):
         self.report.append('dbscan_outlier_detection')
@@ -388,7 +386,21 @@ class Processor:
         sm_fr = infl.summary_frame()
         return self.uni_boxplot_outlier_det(sm_fr['cooks_d'].sort_values(ascending=False))
 
-    def outlier_rank(self,*arg):
+    def uni_iqr_outlier_smoothing(self,DOAGO_results, ds):
+        '''use the info gatheres from the previous function (decide on and get outliers) and smoothes the detected outliers.'''
+        self.report.append('uni_iqr_outlier_smoothing')
+        novo_ds = ds.copy()
+        for key in DOAGO_results.keys():
+            for var in DOAGO_results[key]:
+                if ds[var][ds.index == key].values > np.mean(ds[var]):
+                    novo_ds[var][novo_ds.index == key] = np.percentile(ds[var], 75) + 1.5 * iqr(ds[var])
+
+                else:
+                    novo_ds[var][novo_ds.index == key] = np.percentile(ds[var], 25) - 1.5 * iqr(ds[var])
+        return novo_ds
+
+
+    def outlier_rank(self,smoothing,treshold,*arg):
         '''this function returns two things. First, the number of times each row appears as outlier. The second is the full dictionary with the indexes and the columns where they
         appear as outliers.
         '''
@@ -406,7 +418,7 @@ class Processor:
                     IDS.extend([id_ for sublist in array for id_ in sublist])
 
         full = IDS + keys + ids
-        counts = [full.count(i) for i in full]
+        ratios = [full.count(i)/len(arg) for i in full]
 
         pass_for_full = [thing for thing in arg]
 
@@ -424,8 +436,15 @@ class Processor:
             return dd
 
         outlier_info_dict = get_full_outlier_dict(pass_for_full)
+        ratios=dict(sorted(dict(zip(full, ratios)).items(), key=lambda x: x[1], reverse=True))
+        outliers=list({key for (key, value) in ratios.items() if value > treshold})
 
-        return dict(sorted(dict(zip(full, counts)).items(), key=lambda x: x[1], reverse=True)), outlier_info_dict
+        if smoothing:
+            self.report.append('uni_iqr_rank_outlier_smoothing')
+            outlier_info = dict([(k, v) for (k, v) in outlier_info_dict.items() if k in outliers])
+            self.training=self.uni_iqr_outlier_smoothing(outlier_info,self.training)
+        else:
+            self.training=self.training[~self.training.index.isin(outliers)]
 
     def decide_on_and_get_outliers(self,outlier_rank_result, treshold):
         '''pass the ranking here and choose the records that appear more than  treshold times to be our outliers'''
@@ -433,18 +452,7 @@ class Processor:
         outlier_info = dict([(k, v) for (k, v) in outlier_rank_result[1].items() if k in outliers])
         return outlier_info
 
-    def uni_iqr_outlier_smoothing(self,DOAGO_results, ds):
-        '''use the info gatheres from the previous function (decide on and get outliers) and smoothes the detected outliers.'''
-        self.report.append('uni_iqr_outlier_smoothing')
-        novo_ds = ds.copy()
-        for key in DOAGO_results.keys():
-            for var in DOAGO_results[key]:
-                if ds[var][ds.index == key].values > np.mean(ds[var]):
-                    novo_ds[var][novo_ds.index == key] = np.percentile(ds[var], 75) + 1.5 * iqr(ds[var])
 
-                else:
-                    novo_ds[var][novo_ds.index == key] = np.percentile(ds[var], 25) - 1.5 * iqr(ds[var])
-        return novo_ds
 
     #SAMPLING
     def SMOTE_NC(self):
@@ -459,7 +467,36 @@ class Processor:
         sampled_ds['Response'] = Y_res
         # sampled_ds.index=ds.index
         sampled_ds.columns = self.training.columns
+<<<<<<< HEAD
         self.training = sampled_ds
+=======
+        self.training = sampled_ds.columns
+
+
+    def SMOTE_sampling(self,ds):
+        self.report.append('SMOTE_sampling')
+        Y = ds["Response"]
+        X = ds.drop(columns=["Response"])
+        sm = SMOTE(random_state=self.seed)
+        X_res, Y_res = sm.fit_resample(X, Y)
+        sampled_ds = pd.DataFrame(X_res)
+        sampled_ds['Response'] = Y_res
+        # sampled_ds.index=ds.index
+        sampled_ds.columns = ds.columns
+        return round(sampled_ds, 2)
+
+    def Adasyn_sampling(self,ds):
+        self.report.append('Adasyn_sampling')
+        Y = ds["Response"]
+        X = ds.drop(columns=["Response"])
+        ada = ADASYN(random_state=self.seed)
+        X_res, Y_res = ada.fit_resample(X, Y)
+        sampled_ds = pd.DataFrame(X_res)
+        sampled_ds['Response'] = Y_res
+        # sampled_ds.index=ds.index
+        sampled_ds.columns = ds.columns
+        return round(sampled_ds, 2)
+>>>>>>> f5680b054be754e054c4c5db541d90b403758a59
 
     ### NORMALIZATION
     def _normalize(self):
