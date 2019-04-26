@@ -5,7 +5,7 @@ from sklearn.model_selection import train_test_split, StratifiedKFold, KFold
 from ml_bc_pipeline.data_loader import Dataset
 from ml_bc_pipeline.data_preprocessing import Processor
 from ml_bc_pipeline.feature_engineering import FeatureEngineer
-from ml_bc_pipeline.model import gradientBoosting,grid_search_MLP, assess_generalization_auroc, decision_tree, naive_bayes, logistic_regression, xgboost, ensemble, adaboost
+from ml_bc_pipeline.model import gradientBoosting,grid_search_MLP, assess_generalization_auroc, decision_tree, naive_bayes, logistic_regression, xgboost, ensemble, adaboost, extraTreesClassifier
 from datetime import datetime
 from os import listdir
 import json
@@ -81,7 +81,7 @@ def main():
         mlp_param_grid = {'mlpc__hidden_layer_sizes': [(3), (6), (3, 3), (5, 5)],
                           'mlpc__learning_rate_init': [0.001, 0.01]}
 
-        mlp_gscv = grid_search_MLP(pr.training, mlp_param_grid, seed)
+        mlp_gscv = grid_search_MLP(fe.training, mlp_param_grid, seed)
         print("Best parameter set: ", mlp_gscv.best_params_)
         #report(mlp_gscv.best_estimator_, fe.unseeen, mlp_gscv.best_params_, grid_search_MLP.__name__)
 
@@ -93,7 +93,7 @@ def main():
                          'dt__max_features': [3, 5, 7, None],
                          "dt__max_depth": [3, 4, 5, 6],
                          "dt__min_samples_split": [30, 50, 70]}
-        dt_gscv = decision_tree(pr.training, dt_param_grid, seed)
+        dt_gscv = decision_tree(fe.training, dt_param_grid, seed)
         print("Best parameter set: ", dt_gscv.best_params_)
         #report(dt_gscv.best_estimator_, fe.unseeen, dt_gscv.best_params_,decision_tree.__name__)
 
@@ -102,7 +102,7 @@ def main():
         # =====================================
 
         nb_param_grid = {'nb__alpha': [0, 0.25, 0.5, 0.75, 1]}  # i'm not sure about this parameter
-        nb_gscv = naive_bayes(pr.training, nb_param_grid)
+        nb_gscv = naive_bayes(fe.training, nb_param_grid)
         print("Best parameter set: ", nb_gscv.best_params_)
         #report(nb_gscv.best_estimator_, fe.unseeen, nb_gscv.best_params_,naive_bayes.__name__)
 
@@ -113,9 +113,19 @@ def main():
         logr_param_grid = {'lr__penalty': ['l1', 'l2'],
                            'lr__C': np.logspace(-4, 4, 20),
                            'lr__solver': ['liblinear']}
-        logr_gscv = logistic_regression(pr.training, logr_param_grid, seed)
+        logr_gscv = logistic_regression(fe.training, logr_param_grid, seed)
         print("Best parameter set: ", logr_gscv.best_params_)
         #report(logr_gscv.best_estimator_, fe.unseeen, logr_gscv.best_params_,logistic_regression.__name__)
+
+
+        # =====================================
+        # X TREE CLASSIFIER
+        # =====================================
+
+        xtclf_param_grid = {'xtree__min_samples_split:':[2,5,10],
+                            'xtree__min_samples_leaf':[1,3,6]}
+        xtclf = extraTreesClassifier(fe.training, xtclf_param_grid, seed)
+        #report(xtclf.best_estimator_, fe.unseeen, xtclf.best_params_,xtclf.__name__)
 
         # =====================================
         # XGBOOST
@@ -169,7 +179,7 @@ def main():
             print('processor')
             # +++++++++++++++++ 4) feature engineering
             fe = FeatureEngineer(pr.training, pr.unseen)
-            pipeline['feature_engineering'] = fe.report
+            pipeline['feature_engineering'] = fe.repor
             print('feature_engineering')
             # =====================================
             # NEURAL NETWORK
@@ -203,6 +213,12 @@ def main():
             #print("Best parameter set: ", logr_gscv.best_params_)
             report(logr_gscv.best_estimator_, fe.unseen, logr_gscv.best_params_,logistic_regression.__name__)
 
+            # =====================================
+            # X TREE CLASSIFIER
+            # =====================================
+
+            xtclf.best_estimator_ = xtclf.best_estimator_.best_estimator_.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
+            report(xtclf.best_estimator_, fe.unseen, xtclf.best_params_, xtclf.best_estimator_.__name__)
             # =====================================
             # XGBOOST
             # =====================================

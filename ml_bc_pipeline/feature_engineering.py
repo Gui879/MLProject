@@ -26,11 +26,9 @@ class FeatureEngineer:
         self.report=[]
         self.training = training
         self.unseen = unseen
-        print(self.training.dtypes)
-        print("First:",self.training.shape)
         self._extract_business_features()
 
-        self.linear_regression_selection('Response',10)
+        #self.linear_regression_selection('Response',10)
 
         print("Feature Engeneering Completed!")
         #self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
@@ -38,16 +36,24 @@ class FeatureEngineer:
 
     def _extract_business_features(self):
         self.report.append('_extract_business_features')
+
         for dataset in [self.training, self.unseen]:
+
             # TER CUIDADO, CONFIRMAR SE O NUM WEB PURCHASES TB É
-            dataset["Web_Purchases_Per_Visit"] = dataset["NumWebPurchases"] / dataset["NumWebVisitsMonth"]
+            a = dataset["NumWebPurchases"]
+            b = dataset["NumWebVisitsMonth"]
+            dataset["Web_Purchases_Per_Visit"] = np.divide(a, b, out=np.zeros_like(a), where=b!=0)
             dataset["Total_Purchases"] = dataset["NumWebPurchases"] + dataset["NumCatalogPurchases"] + dataset["NumStorePurchases"]
-            dataset["RatioWebPurchases"] = dataset["NumWebPurchases"] / dataset["Total_Purchases"]
-            dataset["RatioCatalogPurchases"] = dataset["NumCatalogPurchases"] / dataset["Total_Purchases"]
-            dataset["RatioStorePurchases"] = dataset["NumStorePurchases"] / dataset["Total_Purchases"]
+
+            b =  dataset["Total_Purchases"]
+            dataset["RatioWebPurchases"] = np.divide(a, b, out=np.zeros_like(a), where=b != 0)
+            a = dataset["NumCatalogPurchases"]
+            dataset["RatioCatalogPurchases"] = np.divide(a, b, out=np.zeros_like(a), where=b != 0)
+            a = dataset["NumStorePurchases"]
+            dataset["RatioStorePurchases"] = np.divide(a, b, out=np.zeros_like(a), where=b != 0)
 
             dataset["Age"] = datetime.datetime.now().year - dataset["Year_Birth"]
-            dataset["TotalAcceptedCampaigns"] = dataset["AcceptedCmp1"].astype(int)+dataset["AcceptedCmp2"].astype(int)+dataset["AcceptedCmp3"].astype(int)+dataset["AcceptedCmp4"].astype(int)+dataset["AcceptedCmp5"].astype(int)
+            dataset["TotalAcceptedCampaigns"] = dataset["AcceptedCmp1"].astype(int)+dataset["AcceptedCmp2"].astype(int)+ dataset["AcceptedCmp3"].astype(int)+dataset["AcceptedCmp4"].astype(int)+dataset["AcceptedCmp5"].astype(int)
             # Total amount spent
             dataset["TotalMoneySpent"] = dataset["MntWines"] + dataset["MntFruits"] + dataset["MntMeatProducts"] + dataset["MntFishProducts"] + dataset["MntSweetProducts"] + dataset["MntGoldProds"]
             # Calculating the ratios of money spent per category
@@ -57,7 +63,8 @@ class FeatureEngineer:
             dataset["RatioFishProducts"] = dataset["MntFishProducts"] / dataset["TotalMoneySpent"]
             dataset["RatioSweetProducts"] = dataset["MntSweetProducts"] / dataset["TotalMoneySpent"]
             dataset["RatioGoldProdataset"] = dataset["MntGoldProds"] / dataset["TotalMoneySpent"]
-            dataset["MoneyPerPurchase"] = dataset["TotalMoneySpent"] / dataset["Total_Purchases"]
+            a = dataset["TotalMoneySpent"]
+            dataset["MoneyPerPurchase"] = np.divide(a, b, out=np.zeros_like(a), where=b != 0)
             # Changing income to 2 years
             dataset["Income2Years"] = dataset["Income"] * 2
 
@@ -74,7 +81,9 @@ class FeatureEngineer:
 
 
             # Income per person in household
-            dataset["Income_Per_Person"] = dataset["Income2Years"] / dataset["Count_Household"]
+            a = dataset["Income2Years"]
+            b = dataset["Count_Household"]
+            dataset["Income_Per_Person"] = np.divide(a, b, out=np.zeros_like(a), where=b != 0)
             features_to_enconde = ['Education', 'Marital_Status']
             dataset.replace([np.inf, -np.inf], np.nan, inplace=True)
             dataset.fillna(0, inplace=True)
@@ -342,7 +351,7 @@ class FeatureEngineer:
 
     def correlation_feature_ordering(self):
         self.report.append('Correlation_Feature_ordering')
-        feature_order = self.training.columns.drop('Response',axis = 0)
+        feature_order = self.training.drop('Response',axis = 1).columns
         for var in range(len(feature_order)):
             correlation = self.training[feature_order[var],'Response'].corr()
             feature_order[var] = (var,correlation)

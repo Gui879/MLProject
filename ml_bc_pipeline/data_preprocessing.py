@@ -47,41 +47,22 @@ class Processor:
         self.cat_vars = ['AcceptedCmp3', 'AcceptedCmp4', 'AcceptedCmp5','AcceptedCmp1', 'AcceptedCmp2', 'Complain'] +list(self.training.select_dtypes('category').columns)
         #missing columns 'Income' 'num_days_customer'
 
-        self.numerical_var = ['Year_Birth', 'Kidhome', 'Teenhome',  'Recency', 'MntWines',
+        self.numerical_var = ['Dt_Customer','Income','Year_Birth', 'Kidhome', 'Teenhome',  'Recency', 'MntWines',
                          'MntFruits', 'MntMeatProducts', 'MntFishProducts',
                          'MntSweetProducts', 'MntGoldProds', 'NumDealsPurchases', 'NumWebPurchases',
                          'NumCatalogPurchases', 'NumStorePurchases',
                          'NumWebVisitsMonth', 'Response']
 
-
-
         #Deal with missing values
         self._impute_missing_values()
-<<<<<<< HEAD
-
-
-
-        #Outlier Treatment
-        outliers = self._boxplot_outlier_detection()
-        self.training.drop(outliers,axis = 0,inplace = True)
-
-        self.mahalanobis_distance_outlier()
-
-        #Normalization
-        self._normalize()
-=======
-
         #Normalization
         self._normalize()
         #Outlier Treatment
         #outliers = self._boxplot_outlier_detection()
         outliers = self.mahalanobis_distance_outlier()
         self.training.drop(outliers,axis = 0,inplace = True)
-
         #Balancing
         self.SMOTE_NC()
-
->>>>>>> b7a7a194759078f0903276ad26aba050673b0762
         print("Preprocessing complete!")
 
 
@@ -121,7 +102,6 @@ class Processor:
                 self._imputer = SimpleImputer(missing_values=np.nan, strategy='median')
                 self.training[column] = self._imputer.fit_transform(self.training[column].values.reshape(-1,1))
                 self.unseen[column] = self._imputer.transform(self.unseen[column].values.reshape(-1,1))
-
         for var in self.cat_vars:
             var_dict = self.convert_numeric_labelling(var)
             self.training[var] = self.training[var].astype(int)
@@ -136,7 +116,6 @@ class Processor:
             self.revert_numeric_labelling(var,var_dict)
         self.training[self.cat_vars] =self.training[self.cat_vars].astype('category')
         self.unseen[self.cat_vars] = self.unseen[self.cat_vars].astype('category')
-
     # DEALING WITH OUTLIERS
     ### UNIVARIATE OUTLIER DETECTION
     def _filter_df_by_std(self):
@@ -471,18 +450,19 @@ class Processor:
 
     #SAMPLING
     def SMOTE_NC(self):
+        categories = self.training.dtypes
         self.report.append('SMOTE_NC_sampling')
         Y = self.training["Response"]
-        #X = self.training.drop(columns=["Response"])
-        X = self.training.drop('Response',axis = 1)
+        X = self.training.drop(columns=["Response"])
+        x_cols = X.columns
         cat_cols = X[self.cat_vars].columns
         sm = SMOTENC(random_state=self.seed, categorical_features=[cat_cols.get_loc(col) for col in cat_cols])
-        X_res, Y_res = sm.fit_resample(X, Y)
-        sampled_ds = pd.DataFrame(X_res)
+        X_res, Y_res = sm.fit_resample(X.values, Y.values)
+        sampled_ds = pd.DataFrame(X_res,columns = x_cols)
         sampled_ds['Response'] = Y_res
         # sampled_ds.index=ds.index
-        sampled_ds.columns = self.training.columns
         self.training = sampled_ds
+
 
     def SMOTE_sampling(self,ds):
         self.report.append('SMOTE_sampling')
