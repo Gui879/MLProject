@@ -44,9 +44,7 @@ class Processor:
         self.unseen = unseen #.copy() to mantain a copy of the object
         self.report = []
         self.seed = seed
-        self.cat_vars = ['Education', 'Marital_Status', 'AcceptedCmp3', 'AcceptedCmp4', 'AcceptedCmp5',
-                    'AcceptedCmp1', 'AcceptedCmp2', 'Complain']
-
+        self.cat_vars = ['AcceptedCmp3', 'AcceptedCmp4', 'AcceptedCmp5','AcceptedCmp1', 'AcceptedCmp2', 'Complain'] +list(self.training.select_dtypes('category').columns)
         #missing columns 'Income' 'num_days_customer'
 
         self.numerical_var = ['Year_Birth', 'Kidhome', 'Teenhome',  'Recency', 'MntWines',
@@ -57,12 +55,13 @@ class Processor:
 
 
 
-
         #Deal with missing values
         self._impute_missing_values()
 
         #Outlier Treatment
-        self._manual_outlier_removal()
+        outliers = self._boxplot_outlier_detection()
+        self.training.drop(outliers,axis = 0,inplace = True)
+        print(self.training.shape)
 
         #Normalization
         self._normalize()
@@ -112,12 +111,12 @@ class Processor:
 
         for var in self.cat_vars:
             var_dict = self.convert_numeric_labelling(var)
-            try:
-                self._imputer = SimpleImputer(missing_values=np.nan, strategy='most_frequent')
-                self.training[var] = self._imputer.fit_transform(self.training[var].values.reshape(-1,1))
-                self.unseen[var] = self._imputer.transform(self.unseen[var].values.reshape(-1,1))
-            except:
-                print("Error on var:", var)
+            self.training[var] = self.training[var].astype(int)
+            self.unseen[var] = self.unseen[var].astype(int)
+            self._imputer = SimpleImputer(missing_values=np.nan, strategy='most_frequent')
+            self.training[var] = self._imputer.fit_transform(self.training[var].values.reshape(-1,1))
+            self.unseen[var] = self._imputer.transform(self.unseen[var].values.reshape(-1,1))
+
             self.revert_numeric_labelling(var,var_dict)
 
 
@@ -205,31 +204,42 @@ class Processor:
         for key in z_score_outliers.keys(): z_score_outliers[key] = z_score_outliers[key].split(' ')
         return z_score_outliers
 
-
-
-
-    def _boxplot_outlier_detection(self,treshold=1.5):
+    def _boxplot_outlier_detection(self, percent = 0.03, treshold=1.5):
         self.report.append('_boxplot_outlier_detection')
-
-        box_plot_outliers = {}
+        box_plot_outliers = []
+        #For each var check ouytliers and their distance
         for var in self.numerical_var:
             if var != 'Response':
-                df = pd.Series(zscore(self.training[var]))
-                df.index = self.training.index
+                df = pd.Series(zscore(self.training[var].copy()))
+                df.index = self.training.index.copy()
+                iqr_ = iqr(df)
                 Q1 = np.percentile(df, 25)
                 Q3 = np.percentile(df, 75)
-                for record in df.index:
-                    if df[df.index == record].iloc[0] > (Q3 + treshold * iqr(df)) or df[df.index == record].iloc[0] < (
-                            Q1 - treshold * iqr(df)):
-                        if record not in box_plot_outliers:
-                            try:
-                                box_plot_outliers[record] = box_plot_outliers[record] + ' ' + var
-                            except:
-                                box_plot_outliers[record] = var
-        for key in box_plot_outliers.keys(): box_plot_outliers[key] = box_plot_outliers[key].split(' ')
+                ix1 = df.index[np.where(df.values > (Q3 + treshold * iqr_))[0]]
+                indexes = list(zip(ix1, df.ix[ix1].values - (Q3 + treshold * iqr_)))
+                ix2 = df.index[np.where(df.values < (Q1 - treshold * iqr_))[0]]
+                indexes2 = list(zip(ix2, np.abs((df.ix[ix2].values + (Q1 - treshold * iqr_)))))
+                indexes = indexes + indexes2
+                box_plot_outliers = box_plot_outliers + indexes
 
-        return box_plot_outliers
-
+        #Sort outliers in descending order by their distance
+        box_plot_outliers.sort(key = lambda x: x[1],reverse = True)
+        #Delete repeating ids, leave the ones with the highest distance
+        to_delete = []
+        for x in range(len(box_plot_outliers)):
+            a = box_plot_outliers[x]
+            for y in range(1,len(box_plot_outliers)):
+                b = box_plot_outliers[y]
+                if a[0] == b[0]:
+                    if a[1] > b[0]:
+                        to_delete.append(b)
+                    else:
+                        to_delete.append(a)
+        box_plot_outliers = np.array(box_plot_outliers)
+        for x in range(len(box_plot_outliers)-1,-1):
+            del box_plot_outliers[x]
+        n = int(self.training.shape[0] * percent)
+        return [int(x[0]) for x in box_plot_outliers[:n]]
 
     def robust_z_score_method(self, treshold=3.5):
         self.report.append('robust_z_score_method')

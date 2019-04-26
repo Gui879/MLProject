@@ -34,7 +34,6 @@ class Dataset:
                 idxs.append(control)
                 control = control + 1
             control = control + 1
-
         # encode categorical features from training data as a one-hot numeric array.
         enc = OneHotEncoder(handle_unknown='ignore')
 
@@ -44,6 +43,7 @@ class Dataset:
         self.rm_df = pd.concat([self.rm_df, df_temp], axis=1)
         for c in columns:
             self.rm_df[c] = self.rm_df[c].astype('category')
+        self.rm_df.drop(features_to_enconde,axis=1,inplace = True)
 
     def _drop_duplicates(self,full_path):
         """Nós temos dois tipos de dados repetidos. Dados repetidos com o Response diferente e dados repetidos com o Response
