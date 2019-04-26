@@ -1,7 +1,7 @@
 import sys
 import pandas as pd
 from datetime import datetime, date
-
+from sklearn.preprocessing import OneHotEncoder
 
 class Dataset:
     """ Loads and prepares the data
@@ -20,15 +20,37 @@ class Dataset:
         #self._label_encoder()
         #self._as_category()
         self._days_since_customer()
-
+        self._generate_dummies()
         print("Finnished loading data!")
 
+    def _generate_dummies(self):
+        features_to_enconde = ['Education', 'Marital_Status']
+        columns = []
+        idxs = []
+        control = 0
+        for column in features_to_enconde:
+            for index in range(len(self.rm_df[column].unique()) - 1):
+                columns.append(column + '_' + self.rm_df[column].unique()[index])
+                idxs.append(control)
+                control = control + 1
+            control = control + 1
+        # encode categorical features from training data as a one-hot numeric array.
+        enc = OneHotEncoder(handle_unknown='ignore')
+
+        Xtr_enc = enc.fit_transform(self.rm_df[features_to_enconde].values).toarray()
+        # update training data
+        df_temp = pd.DataFrame(Xtr_enc[:,idxs], index=self.rm_df.index, columns=columns)
+        self.rm_df = pd.concat([self.rm_df, df_temp], axis=1)
+        for c in columns:
+            self.rm_df[c] = self.rm_df[c].astype('category')
+        self.rm_df.drop(features_to_enconde,axis=1,inplace = True)
 
     def _drop_duplicates(self,full_path):
 
         ds = self.rm_df
         ds = ds.drop(columns=["ID", "Response"])
         da = pd.read_excel(full_path)
+
 
         # Colunas do dataset numa lista e retirar a primeira, aka ID
         colunas = list(da)
@@ -68,6 +90,7 @@ class Dataset:
         merged = sem_ID.merge(frame_ID.to_frame(), left_index=True, right_index=True, how='inner')
         merged.index = merged['ID']
         ds = merged.drop(columns='ID').copy()
+        self.rm_df=ds
         del merged
 
     def _drop_metadata_features(self):

@@ -1,7 +1,7 @@
 import sys
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split, StratifiedKFold
+from sklearn.model_selection import train_test_split, StratifiedKFold, KFold
 from ml_bc_pipeline.data_loader import Dataset
 from ml_bc_pipeline.data_preprocessing import Processor
 from ml_bc_pipeline.feature_engineering import FeatureEngineer
@@ -11,10 +11,20 @@ from os import listdir
 import json
 from sklearn.utils import class_weight
 
+
 def main():
+
+    # ===========================
+    # PARAMETERS
+    # ===========================
+
     seed = 1
     cv_splits = 5
+    kfold_simple = True
+    stratified_kfold=False
+
     test_version = len(listdir('Logs'))
+
     global log
     log = pd.DataFrame()
 
@@ -155,7 +165,12 @@ def main():
         ensemble_estimator = ensemble(fe.training, classifiers)
         report(ensemble_estimator, fe.unseen, classifiers.keys(), ensemble.__name__)
 
-        skf = StratifiedKFold(n_splits=cv_splits, shuffle=True)
+
+        if kfold_simple:
+            skf = KFold(n_splits=cv_splits, shuffle=True)
+        elif stratified_kfold:
+            skf = StratifiedKFold(n_splits=cv_splits, shuffle=True)
+
 
         for train_index, test_index in skf.split(DF_train.loc[:, DF_train.columns != "Response"],DF_train['Response']):
 

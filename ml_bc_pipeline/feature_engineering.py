@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import datetime
 import re
+
+from scipy.stats import stats
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.decomposition import FactorAnalysis
 from sklearn.decomposition import FastICA
@@ -10,6 +12,9 @@ from sklearn.decomposition import PCA
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.feature_selection import RFE, SelectKBest, f_classif
 from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import KBinsDiscretizer, MinMaxScaler
+
+from ga_feature_selection.feature_selection_ga import FeatureSelectionGA
 
 
 
@@ -24,6 +29,7 @@ class FeatureEngineer:
         self._extract_business_features()
         self.anova_F_selection('Response',10)
         print("Feature Engeneering Completed!")
+        self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
 
 
     def _extract_business_features(self):
@@ -47,7 +53,7 @@ class FeatureEngineer:
             dataset["RatioFishProducts"] = dataset["MntFishProducts"] / dataset["TotalMoneySpent"]
             dataset["RatioSweetProducts"] = dataset["MntSweetProducts"] / dataset["TotalMoneySpent"]
             dataset["RatioGoldProdataset"] = dataset["MntGoldProds"] / dataset["TotalMoneySpent"]
-
+            dataset["MoneyPerPurchase"] = dataset["TotalMoneySpent"] / dataset["Total_Purchases"]
             # Changing income to 2 years
             dataset["Income2Years"] = dataset["Income"] * 2
 
@@ -58,17 +64,16 @@ class FeatureEngineer:
             dataset["TotalKids"] = dataset["Teenhome"] + dataset["Kidhome"]
 
             # People per Household
-            status = ["Together", "Married"]
             dataset["Count_Household"] = 0
-            dataset["Count_Household"].loc[(dataset["Marital_Status"].isin(status))] = 2 + dataset["TotalKids"]
-            dataset["Count_Household"].loc[(~dataset["Marital_Status"].isin(status))] = 1 + dataset["TotalKids"]
+            dataset["Count_Household"] = 2*pd.to_numeric(dataset['Marital_Status_Married']).values + 2*pd.to_numeric(dataset['Marital_Status_Together']) + dataset["TotalKids"]
+            dataset["Count_Household"] = pd.to_numeric(dataset['Marital_Status_Divorced']) + pd.to_numeric(dataset['Marital_Status_Single']) + dataset["TotalKids"]
+
 
             # Income per person in household
             dataset["Income_Per_Person"] = dataset["Income2Years"] / dataset["Count_Household"]
             features_to_enconde = ['Education', 'Marital_Status']
             dataset.replace([np.inf, -np.inf], np.nan, inplace=True)
             dataset.fillna(0, inplace=True)
-            dataset.drop(features_to_enconde, axis=1, inplace=True)
 
 
 
@@ -329,7 +334,8 @@ class FeatureEngineer:
         self.unseen = self.unseen[kept_vars]
 
 
-    def correlation_feature_selection(self):
+    def correlation_feature_ordering(self):
+        self.report.append('Correlation_Feature_ordering')
         feature_order = self.training.columns.drop('Response',axis = 0)
         for var in range(len(feature_order)):
             correlation = self.training[feature_order[var],'Response'].corr()
@@ -338,6 +344,7 @@ class FeatureEngineer:
         return feature_order
 
     def correlation_based_feature_selection(self,feature_importance_function):
+        self.report.append('Correlation_Based_Feature_selection')
         #Returns variables sorted from most importance to least important
         variables_list = feature_importance_function(self.training)
         to_delete = []
@@ -353,4 +360,16 @@ class FeatureEngineer:
                     to_delete.append(j)
 
         self.training = self.training[variables_list]
+
+
+    def ga_feature_selection(self,model):
+
+        feature_selection = FeatureSelectionGA(model,
+                                               self.training.loc[:, self.training.columns != "Response"].values,
+                                               self.training["Response"].values)
+        feature_selection.generate(n_pop=100, ngen=5)
+
+        return self.training.loc[:, self.training.columns != "Response"].columns[np.where(np.array(feature_selection.best_ind)==1)]
+
+
 
