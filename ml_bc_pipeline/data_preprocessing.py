@@ -56,12 +56,11 @@ class Processor:
 
 
         #Deal with missing values
-        self._impute_missing_values()
+        self._drop_missing_values()
 
         #Outlier Treatment
         outliers = self._boxplot_outlier_detection()
         self.training.drop(outliers,axis = 0,inplace = True)
-        print(self.training.shape)
 
         #Normalization
         self._normalize()
