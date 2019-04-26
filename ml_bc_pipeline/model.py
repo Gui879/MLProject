@@ -11,6 +11,7 @@ from sklearn.naive_bayes import ComplementNB
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import VotingClassifier, AdaBoostClassifier, GradientBoostingClassifier
 import xgboost as xgb
+from sklearn.ensemble import ExtraTreesClassifier
 
 def grid_search_MLP(training, param_grid, seed, cv=5):
     """ Multi-layer Perceptron classifier hyperparameter estimation using grid search with cross-validation.
@@ -51,7 +52,6 @@ def decision_tree(training, param_grid, seed, cv=5):
 
     return clf_gscv
 
-
 def naive_bayes(training, param_grid, cv=5):
 
     pipeline = Pipeline([("nb", ComplementNB())])
@@ -68,6 +68,16 @@ def logistic_regression(training, param_grid, seed, cv=5):
     clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
     clf_gscv.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
     print(type(clf_gscv))
+
+    return clf_gscv
+
+
+def extraTreesClassifier(training, param_grid, seed, cv = 5):
+
+    pipeline = Pipeline([ ("xtree",  ExtraTreesClassifier(random_state = seed))])
+
+    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
+    clf_gscv.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
 
     return clf_gscv
 
