@@ -330,7 +330,8 @@ class FeatureEngineer:
         return dict(sorted(dict(zip(VARS, counts)).items(), key=lambda x: x[1], reverse=True))
 
 
-    def correlation_feature_selection(self):
+    def correlation_feature_ordering(self):
+        self.report.append('Correlation_Feature_ordering')
         feature_order = self.training.columns.drop('Response',axis = 0)
         for var in range(len(feature_order)):
             correlation = self.training[feature_order[var],'Response'].corr()
@@ -339,6 +340,7 @@ class FeatureEngineer:
         return feature_order
 
     def correlation_based_feature_selection(self,feature_importance_function):
+        self.report.append('Correlation_Based_Feature_selection')
         #Returns variables sorted from most importance to least important
         variables_list = feature_importance_function(self.training)
         to_delete = []
