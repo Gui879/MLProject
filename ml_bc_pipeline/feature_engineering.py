@@ -28,7 +28,7 @@ class FeatureEngineer:
         print("First:",self.training.shape)
         self._extract_business_features()
         print("Feature Engeneering Completed!")
-        self.ga_feature_selection(LogisticRegression())
+        self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
 
 
     def _extract_business_features(self):
@@ -63,17 +63,16 @@ class FeatureEngineer:
             dataset["TotalKids"] = dataset["Teenhome"] + dataset["Kidhome"]
 
             # People per Household
-            status = ["Together", "Married"]
             dataset["Count_Household"] = 0
-            dataset["Count_Household"].loc[(dataset["Marital_Status"].isin(status))] = 2 + dataset["TotalKids"]
-            dataset["Count_Household"].loc[(~dataset["Marital_Status"].isin(status))] = 1 + dataset["TotalKids"]
+            dataset["Count_Household"] = 2*pd.to_numeric(dataset['Marital_Status_Married']).values + 2*pd.to_numeric(dataset['Marital_Status_Together']) + dataset["TotalKids"]
+            dataset["Count_Household"] = pd.to_numeric(dataset['Marital_Status_Divorced']) + pd.to_numeric(dataset['Marital_Status_Single']) + dataset["TotalKids"]
+
 
             # Income per person in household
             dataset["Income_Per_Person"] = dataset["Income2Years"] / dataset["Count_Household"]
             features_to_enconde = ['Education', 'Marital_Status']
             dataset.replace([np.inf, -np.inf], np.nan, inplace=True)
             dataset.fillna(0, inplace=True)
-            dataset.drop(features_to_enconde, axis=1, inplace=True)
 
 
 
@@ -362,8 +361,8 @@ class FeatureEngineer:
         feature_selection = FeatureSelectionGA(model,
                                                self.training.loc[:, self.training.columns != "Response"].values,
                                                self.training["Response"].values)
-        feature_selection.generate(n_pop=20, ngen=5)
-        
+        feature_selection.generate(n_pop=100, ngen=5)
+
         return self.training.loc[:, self.training.columns != "Response"].columns[np.where(np.array(feature_selection.best_ind)==1)]
 
 

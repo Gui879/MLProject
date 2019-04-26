@@ -36,6 +36,7 @@ class Dataset:
         ds = ds.drop(columns=["ID", "Response"])
         da = pd.read_excel(full_path)
 
+
         # Colunas do dataset numa lista e retirar a primeira, aka ID
         colunas = list(da)
         colunas.pop(0)
@@ -74,6 +75,7 @@ class Dataset:
         merged = sem_ID.merge(frame_ID.to_frame(), left_index=True, right_index=True, how='inner')
         merged.index = merged['ID']
         ds = merged.drop(columns='ID').copy()
+        self.rm_df=ds
         del merged
 
     def _drop_metadata_features(self):
