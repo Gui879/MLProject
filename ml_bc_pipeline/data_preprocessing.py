@@ -55,8 +55,6 @@ class Processor:
 
         #Deal with missing values
         self._impute_missing_values()
-<<<<<<< HEAD
-
 
         #Outlier Treatment
         outliers = self._boxplot_outlier_detection()
