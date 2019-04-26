@@ -55,18 +55,6 @@ class Processor:
 
         #Deal with missing values
         self._impute_missing_values()
-
-        #Outlier Treatment
-        outliers = self._boxplot_outlier_detection()
-        self.training.drop(outliers,axis = 0,inplace = True)
-
-        self.mahalanobis_distance_outlier()
-
-        #Normalization
-        self._normalize()
-
-
-
         #Normalization
         self._normalize()
         #Outlier Treatment

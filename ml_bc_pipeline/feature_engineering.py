@@ -25,18 +25,18 @@ class FeatureEngineer:
         self.report=[]
         self.training = training
         self.unseen = unseen
-        self._extract_business_features()
+        #self._extract_business_features()
 
 
         #self.linear_regression_selection('Response',10)
         #self.lda_extraction()
         #self.linear_regression_selection('Response',10)
         components = self.pca_extraction()
-        print(components)
-        #self.correlation_based_feature_selection(self.correlation_feature_ordering)
+        self.training = pd.concat([self.training,components],axis = 1)
+        self.correlation_based_feature_selection(self.correlation_feature_ordering)
 
         print("Feature Engeneering Completed!")
-        #self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
+        #self.ga_feature_selection(LogisticRegression(solver = 'lbfgs'))
 
 
     def _extract_business_features(self):
@@ -127,20 +127,19 @@ class FeatureEngineer:
 
     def pca_extraction(self,threshold = 0.8):
         self.report.append('pca_extraction')
-        ds = self.training
+        ds = self.training.copy().loc[:, self.training.dtypes != 'category'].drop('Response',axis = 1)
         pca = PCA()
-        pca.fit(ds)
-        components = pd.Series(pca.explained_variance_, index=range(1, ds.shape[1] + 1))
-        components = components
+        pca.fit(ds.values.T)
         explained = 0
         final_components = 0
-        for component in components:
+        for component in pca.explained_variance_ratio_:
+            print(component)
             explained = explained + component
-            final_components = final_components +1
+            final_components = final_components + 1
             if explained >= threshold:
                 break
-        print(self.training.shape, pca.components_.shape)
-        self.training = pca.components_
+        pca_components = pca.components_[:final_components]
+        return pd.DataFrame(pca_components.T, columns = ['C_' + str(col) for col in range(final_components)])
 
     def _drop_constant_features(self):
         self.report.append('_drop_constant_features')
@@ -379,20 +378,24 @@ class FeatureEngineer:
     def correlation_based_feature_selection(self,feature_importance_function):
         self.report.append('Correlation_Based_Feature_selection')
         #Returns variables sorted from most importance to least important
-        variables_list = feature_importance_function(self.training)
+        variables_list = feature_importance_function()
+        keys = list(variables_list.keys())
+        print(keys)
         to_delete = []
-        iter_ = iter(range(len(variables_list)))
-        for i in range(len(variables_list)):
-            if i in to_delete:
-                next(iter,None)
-            var1 = variables_list[i]
-            for j in range(len(variables_list)):
-                var2 = variables_list[j]
-                correlation = self.training[var1,var2].corr()
+        iter_ = iter(range(len(variables_list)-1))
+        for i in iter_:
+            key = keys[i]
+            if key in to_delete:
+                next(iter_,None)
+            for j in range(1,len(variables_list)):
+                key2 = keys[j]
+                correlation = self.training[[key,key2]].corr()
                 if correlation > 0.8:
-                    to_delete.append(j)
+                    to_delete.append(key2)
 
-        self.training = self.training[variables_list]
+        for key in to_delete:
+            del variables_list[key]
+        self.training = self.training[keys]
 
 
     def ga_feature_selection(self,model):
