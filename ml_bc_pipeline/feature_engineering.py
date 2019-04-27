@@ -25,12 +25,13 @@ class FeatureEngineer:
         self.report=[]
         self.training = training
         self.unseen = unseen
-        self._extract_business_features()
+        #self._extract_business_features()
 
 
         #self.linear_regression_selection('Response',10)
         #self.lda_extraction()
         #self.linear_regression_selection('Response',10)
+<<<<<<< HEAD
         #self.pca_extraction()
 
         #components = self.pca_extraction()
@@ -41,6 +42,14 @@ class FeatureEngineer:
         #self.feature_selection_rank(0.5,self.anova_F_selection('Response',20),self.extra_Trees_Classifier(20))
         #print("Feature Engeneering Completed!")
         #self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
+        #components = self.pca_extraction()
+        #self.training = pd.concat([self.training,components],axis = 1)
+
+        #self.correlation_based_feature_selection(self.correlation_feature_ordering)
+
+
+        print("Feature Engeneering Completed!")
+        #self.ga_feature_selection(LogisticRegression(solver = 'lbfgs'))
 
 
     def _extract_business_features(self):
@@ -131,20 +140,18 @@ class FeatureEngineer:
 
     def pca_extraction(self,threshold = 0.8):
         self.report.append('pca_extraction')
-        ds = self.training
+        ds = self.training.copy().loc[:, self.training.dtypes != 'category'].drop('Response',axis = 1)
         pca = PCA()
-        pca.fit(ds)
-        components = pd.Series(pca.explained_variance_, index=range(1, ds.shape[1] + 1))
-        components = components
+        pca.fit(ds.values.T)
         explained = 0
         final_components = 0
-        for component in components:
+        for component in pca.explained_variance_ratio_:
             explained = explained + component
-            final_components = final_components +1
+            final_components = final_components + 1
             if explained >= threshold:
                 break
-        print(self.training.shape, pca.components_.shape)
-        self.training = pca.components_
+        pca_components = pca.components_[:final_components]
+        return pd.DataFrame(pca_components.T, columns = ['C_' + str(col) for col in range(final_components)],index = self.training.index)
 
     def _drop_constant_features(self):
         self.report.append('_drop_constant_features')
@@ -243,7 +250,6 @@ class FeatureEngineer:
 
         return np.array(reg_results.head(n)['variable'].values)
 
-
     def fisher_score(self, vd, n):
         self.report.append('fisher_score')
         ds = self.training
@@ -262,7 +268,6 @@ class FeatureEngineer:
         results.sort_values(ascending=False, inplace=True)
         return np.array(results.head(n).index)
 
-
     def entropy(self):
         ds = self.training
         if len(ds.unique()) > 1:
@@ -271,8 +276,6 @@ class FeatureEngineer:
             return np.sum([-p_c0 * np.log2(p_c0), -p_c1 * np.log2(p_c1)])
         else:
             return 0
-
-
 
     def all_inf_gain(self, vd, n):
         self.report.append('all_inf_gain')
@@ -369,7 +372,6 @@ class FeatureEngineer:
         print('after\n')
         print(self.training.head())
 
-
     def correlation_feature_ordering(self):
         self.report.append('Correlation_Feature_ordering')
         vars_corr = {}
@@ -383,25 +385,27 @@ class FeatureEngineer:
 
         return dict(sorted(vars_corr.items(), key=lambda kv: kv[1], reverse=True))
 
-
     def correlation_based_feature_selection(self,feature_importance_function):
         self.report.append('Correlation_Based_Feature_selection')
         #Returns variables sorted from most importance to least important
-        variables_list = feature_importance_function(self.training)
+        variables_list = feature_importance_function()
+        keys = list(variables_list.keys())
         to_delete = []
-        iter_ = iter(range(len(variables_list)))
-        for i in range(len(variables_list)):
-            if i in to_delete:
-                next(iter,None)
-            var1 = variables_list[i]
-            for j in range(len(variables_list)):
-                var2 = variables_list[j]
-                correlation = self.training[var1,var2].corr()
-                if correlation > 0.8:
-                    to_delete.append(j)
-
-        self.training = self.training[variables_list]
-
+        iter_ = iter(range(1,len(variables_list)-1))
+        corrs = np.abs(self.training[keys].astype('float64').corr())
+        for i in iter_:
+            key = keys[i]
+            if key in to_delete:
+                next(iter_,None)
+            for j in range(0,i):
+                key2 = keys[j]
+                if key2 not in to_delete:
+                    correlation = corrs[key].ix[key2]
+                    if correlation > 0.8:
+                        to_delete.append(key2)
+        for key in to_delete:
+            del variables_list[key]
+        self.training = self.training[list(variables_list.keys())+['Response']]
 
     def ga_feature_selection(self,model):
 

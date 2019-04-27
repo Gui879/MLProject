@@ -122,8 +122,9 @@ def main():
         # X TREE CLASSIFIER
         # =====================================
 
-        xtclf_param_grid = {'xtree__min_samples_split:':[2,5,10],
-                            'xtree__min_samples_leaf':[1,3,6]}
+        xtclf_param_grid = {'xtree__min_samples_split':[2,5,10],
+                            'xtree__min_samples_leaf':[1,3,6],
+                            'criterion':['gini','entropy']}
         xtclf = extraTreesClassifier(fe.training, xtclf_param_grid, seed)
         #report(xtclf.best_estimator_, fe.unseeen, xtclf.best_params_,xtclf.__name__)
 
@@ -178,6 +179,7 @@ def main():
             pipeline['preprocessing'] = pr.report
             print('processor')
             # +++++++++++++++++ 4) feature engineering
+
             fe = FeatureEngineer(pr.training, pr.unseen,seed)
             pipeline['feature_engineering'] = fe.report
             print('feature_engineering')
