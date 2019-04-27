@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, cross_validate
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import make_scorer, average_precision_score, precision_recall_curve, roc_curve, roc_auc_score, f1_score, recall_score, precision_score, confusion_matrix, classification_report
 from sklearn.tree import DecisionTreeClassifier
@@ -11,6 +11,7 @@ from sklearn.naive_bayes import ComplementNB
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import VotingClassifier, AdaBoostClassifier, GradientBoostingClassifier
 import xgboost as xgb
+from sklearn.ensemble import ExtraTreesClassifier
 
 def grid_search_MLP(training, param_grid, seed, cv=5):
     """ Multi-layer Perceptron classifier hyperparameter estimation using grid search with cross-validation.
@@ -35,7 +36,6 @@ def grid_search_MLP(training, param_grid, seed, cv=5):
     #sklearn pipeline standardizes dummmie variables which we do not want so in here a custom scaler is used
 
     pipeline = Pipeline([("mlpc", MLPClassifier(random_state=seed))])
-
     clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
     clf_gscv.fit(training.loc[:, (training.columns != "Response")].values, training["Response"].values)
 
@@ -52,8 +52,7 @@ def decision_tree(training, param_grid, seed, cv=5):
 
     return clf_gscv
 
-
-def naive_bayes(training, param_grid, seed, cv=5):
+def naive_bayes(training, param_grid, cv=5):
 
     pipeline = Pipeline([("nb", ComplementNB())])
 
@@ -72,27 +71,38 @@ def logistic_regression(training, param_grid, seed, cv=5):
 
     return clf_gscv
 
-def adaboost(training, param_grid, seed, cv=5):
-    clf = AdaBoostClassifier(n_estimators=50, learning_rate=1).fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
-    return  clf
 
+def extraTreesClassifier(training, param_grid, seed, cv = 5):
 
-def gradientBoosting(training, param_grid, seed, cv=5):
-    clf = GradientBoostingClassifier(n_estimators=20, learning_rate = 0.1, max_features=2, max_depth = 2, random_state = 0)
+    pipeline = Pipeline([ ("xtree",  ExtraTreesClassifier(random_state = seed))])
+
+    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
+    clf_gscv.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
+
+    return clf_gscv
+
+def adaboost(training,seed):
+    clf = AdaBoostClassifier(n_estimators=50, learning_rate=1, random_state=seed)
     clf.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
     return  clf
 
-def ensemble(training, classifiers, seed, cv=5):
 
+def gradientBoosting(training, seed):
+    clf = GradientBoostingClassifier(n_estimators=20, learning_rate = 0.1, max_features=2, max_depth = 2, random_state = seed)
+    clf.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
+    return  clf
+
+
+def ensemble(training, classifiers):
     clf = VotingClassifier(estimators=list(classifiers.items()), voting='soft')
     clf.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
     return clf
 
-def xgboost(training, unseen, seed, cv=5):
 
-    xgb_model = xgb.XGBClassifier().fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
-
+def xgboost(training,seed):
+    xgb_model = xgb.XGBClassifier(random_state=seed).fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
     return xgb_model
+
 
 def assess_generalization_auroc(estimator, unseen, print_graph):
 
@@ -102,8 +112,9 @@ def assess_generalization_auroc(estimator, unseen, print_graph):
 
     stats = {}
 
-    best_threshold, best_profit = profit_curve(unseen["Response"], y_score, print_graph)
+    best_threshold, best_profit_ration, best_profit = profit_curve(unseen["Response"], y_score, print_graph)
     stats['best_threshold'] = best_threshold
+    stats['best_profit_ration'] = best_profit_ration
     stats['best_profit'] = best_profit
 
     predicted = [0 if v < best_threshold else 1 for v in y_score]
@@ -172,7 +183,7 @@ def profit_curve(y_true, y_score, print_graph):
     best_revenue = np.max(revenues)
     total_revenue = np.sum(y_true) * (revenue_answer - expense_answer)
     revenue_ratio = best_revenue/total_revenue
-    return t, revenue_ratio
+    return t, revenue_ratio, best_revenue
 
 
 def profit(y_true, y_score):
@@ -194,3 +205,5 @@ def profit(y_true, y_score):
     total_revenue = np.sum(y_true) * (revenue_answer - expense_answer)
     revenue_ratio = best_revenue/total_revenue
     return revenue_ratio
+
+

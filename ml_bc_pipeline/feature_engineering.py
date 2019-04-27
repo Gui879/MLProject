@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import datetime
 import re
+
+from scipy.stats import stats, chi2_contingency
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.decomposition import FactorAnalysis
 from sklearn.decomposition import FastICA
@@ -10,32 +12,66 @@ from sklearn.decomposition import PCA
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.feature_selection import RFE, SelectKBest, f_classif
 from sklearn.linear_model import LogisticRegression
+import statsmodels.api as sm
+from sklearn.preprocessing import KBinsDiscretizer, MinMaxScaler,PowerTransformer
+
+from ga_feature_selection.feature_selection_ga import FeatureSelectionGA
 
 
 class FeatureEngineer:
 
-    def __init__(self, training, unseen):
+    def __init__(self, training, unseen, seed):
         self._rank = {}
         self.report=[]
         self.training = training
         self.unseen = unseen
-        print("First:",self.training.shape)
-        self._extract_business_features()
+        #self._extract_business_features()
+
+
+        #self.linear_regression_selection('Response',10)
+        #self.lda_extraction()
+        #self.linear_regression_selection('Response',10)
+<<<<<<< HEAD
+        #self.pca_extraction()
+
+        #components = self.pca_extraction()
+        #print(components)
+
+        #self.correlation_based_feature_selection(self.correlation_feature_ordering)
+
+        #self.feature_selection_rank(0.5,self.anova_F_selection('Response',20),self.extra_Trees_Classifier(20))
+        #print("Feature Engeneering Completed!")
+        #self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
+        #components = self.pca_extraction()
+        #self.training = pd.concat([self.training,components],axis = 1)
+
+        #self.correlation_based_feature_selection(self.correlation_feature_ordering)
+
+
         print("Feature Engeneering Completed!")
+        #self.ga_feature_selection(LogisticRegression(solver = 'lbfgs'))
 
 
     def _extract_business_features(self):
         self.report.append('_extract_business_features')
+
         for dataset in [self.training, self.unseen]:
+
             # TER CUIDADO, CONFIRMAR SE O NUM WEB PURCHASES TB É
-            dataset["Web_Purchases_Per_Visit"] = dataset["NumWebPurchases"] / dataset["NumWebVisitsMonth"]
+            a = dataset["NumWebPurchases"]
+            b = dataset["NumWebVisitsMonth"]
+            dataset["Web_Purchases_Per_Visit"] = np.divide(a, b, out=np.zeros_like(a), where=b!=0)
             dataset["Total_Purchases"] = dataset["NumWebPurchases"] + dataset["NumCatalogPurchases"] + dataset["NumStorePurchases"]
-            dataset["RatioWebPurchases"] = dataset["NumWebPurchases"] / dataset["Total_Purchases"]
-            dataset["RatioCatalogPurchases"] = dataset["NumCatalogPurchases"] / dataset["Total_Purchases"]
-            dataset["RatioStorePurchases"] = dataset["NumStorePurchases"] / dataset["Total_Purchases"]
+
+            b =  dataset["Total_Purchases"]
+            dataset["RatioWebPurchases"] = np.divide(a, b, out=np.zeros_like(a), where=b != 0)
+            a = dataset["NumCatalogPurchases"]
+            dataset["RatioCatalogPurchases"] = np.divide(a, b, out=np.zeros_like(a), where=b != 0)
+            a = dataset["NumStorePurchases"]
+            dataset["RatioStorePurchases"] = np.divide(a, b, out=np.zeros_like(a), where=b != 0)
 
             dataset["Age"] = datetime.datetime.now().year - dataset["Year_Birth"]
-            dataset["TotalAcceptedCampaigns"] = dataset["AcceptedCmp1"]+dataset["AcceptedCmp2"]+dataset["AcceptedCmp3"]+dataset["AcceptedCmp4"]+dataset["AcceptedCmp5"]
+            dataset["TotalAcceptedCampaigns"] = dataset["AcceptedCmp1"].astype(int)+dataset["AcceptedCmp2"].astype(int)+ dataset["AcceptedCmp3"].astype(int)+dataset["AcceptedCmp4"].astype(int)+dataset["AcceptedCmp5"].astype(int)
             # Total amount spent
             dataset["TotalMoneySpent"] = dataset["MntWines"] + dataset["MntFruits"] + dataset["MntMeatProducts"] + dataset["MntFishProducts"] + dataset["MntSweetProducts"] + dataset["MntGoldProds"]
             # Calculating the ratios of money spent per category
@@ -44,37 +80,44 @@ class FeatureEngineer:
             dataset["RatioMeatProducts"] = dataset["MntMeatProducts"] / dataset["TotalMoneySpent"]
             dataset["RatioFishProducts"] = dataset["MntFishProducts"] / dataset["TotalMoneySpent"]
             dataset["RatioSweetProducts"] = dataset["MntSweetProducts"] / dataset["TotalMoneySpent"]
+<<<<<<< HEAD
             dataset["RatioGoldProd"] = dataset["MntGoldProds"] / dataset["TotalMoneySpent"]
 
+=======
+            dataset["RatioGoldProdataset"] = dataset["MntGoldProds"] / dataset["TotalMoneySpent"]
+            a = dataset["TotalMoneySpent"]
+            dataset["MoneyPerPurchase"] = np.divide(a, b, out=np.zeros_like(a), where=b != 0)
+>>>>>>> b385bf11d700803be1d5e7eb67b7b210a9440520
             # Changing income to 2 years
             dataset["Income2Years"] = dataset["Income"] * 2
 
             # Calculating Effort Rate
-            dataset["EffortRate"] = dataset["TotalMoneySpent"] / dataset["Income2Years"]
+            a = dataset["TotalMoneySpent"]
+            b = dataset["Income2Years"]
+            dataset["EffortRate"] = np.divide(a, b, out=np.zeros_like(a), where=b != 0)
 
             # All kidataset
             dataset["TotalKids"] = dataset["Teenhome"] + dataset["Kidhome"]
 
             # People per Household
-            status = ["Together", "Married"]
             dataset["Count_Household"] = 0
-            dataset["Count_Household"].loc[(dataset["Marital_Status"].isin(status))] = 2 + dataset["TotalKids"]
-            dataset["Count_Household"].loc[(~dataset["Marital_Status"].isin(status))] = 1 + dataset["TotalKids"]
+            dataset["Count_Household"] = 2*pd.to_numeric(dataset['Marital_Status_Married']).values + 2*pd.to_numeric(dataset['Marital_Status_Together']) + dataset["TotalKids"]
+            dataset["Count_Household"] = pd.to_numeric(dataset['Marital_Status_Divorced']) + pd.to_numeric(dataset['Marital_Status_Single']) + dataset["TotalKids"]
+
 
             # Income per person in household
-            dataset["Income_Per_Person"] = dataset["Income2Years"] / dataset["Count_Household"]
+            a = dataset["Income2Years"]
+            b = dataset["Count_Household"]
+            dataset["Income_Per_Person"] = np.divide(a, b, out=np.zeros_like(a), where=b != 0)
             features_to_enconde = ['Education', 'Marital_Status']
             dataset.replace([np.inf, -np.inf], np.nan, inplace=True)
             dataset.fillna(0, inplace=True)
-            dataset.drop(features_to_enconde, axis=1, inplace=True)
-
-
 
     def lda_extraction(self):
         self.report.append('lda_extraction')
         ds = self.training
         y = self.training['Response']
-        clf = LinearDiscriminantAnalysis(solver="eigen")
+        clf = LinearDiscriminantAnalysis(solver="svd")
         lda = clf.fit(ds, y)
         lda_ds = lda.transform(ds)
         lda_coef = lda.coef_
@@ -100,14 +143,20 @@ class FeatureEngineer:
         indep_ds = ica.transform(ds)
         return indep_comp, indep_ds
 
-    def pca_extraction(self):
+    def pca_extraction(self,threshold = 0.8):
         self.report.append('pca_extraction')
-        ds = self.training
+        ds = self.training.copy().loc[:, self.training.dtypes != 'category'].drop('Response',axis = 1)
         pca = PCA()
-        pca.fit(ds)
-        components = pd.Series(pca.explained_variance_, index=range(1, ds.shape[1] + 1))
-        components = components * 100
-        return components
+        pca.fit(ds.values.T)
+        explained = 0
+        final_components = 0
+        for component in pca.explained_variance_ratio_:
+            explained = explained + component
+            final_components = final_components + 1
+            if explained >= threshold:
+                break
+        pca_components = pca.components_[:final_components]
+        return pd.DataFrame(pca_components.T, columns = ['C_' + str(col) for col in range(final_components)],index = self.training.index)
 
     def _drop_constant_features(self):
         self.report.append('_drop_constant_features')
@@ -149,7 +198,7 @@ class FeatureEngineer:
                 # 3) 1) 3) obtain contingency table
                 cont_tab = pd.crosstab(feature_bin, self.training[target], margins=False)
                 # 3) 1) 4) compute Chi-Squared test
-                chi_test_value = stats.chi2_contingency(cont_tab)[0]
+                chi_test_value = chi2_contingency(cont_tab)[0]
                 # 3) 1) 5) choose the best so far Box-Cox transformation based on Chi-Squared test
                 if chi_test_value > best_test_value:
                     best_test_value, best_trans_label, best_power_trans = chi_test_value, trans_key, feature_trans
@@ -160,21 +209,23 @@ class FeatureEngineer:
             self.unseen[feature] = np.round(self._bx_cx_trans_dict[best_trans_label](self.unseen[feature]), 4)
         self.box_cox_features = num_features_BxCx
 
+
     ########FEATURE SELECTION################################
     def rank_features_chi_square(self, continuous_flist, categorical_flist):
         self.report.append('rank_features_chi_square')
         chisq_dict = {}
-        if continuous_flist:
+
+        if len(continuous_flist)>0:
             bindisc = KBinsDiscretizer(n_bins=10, encode='ordinal', strategy="uniform")
             for feature in continuous_flist:
                 feature_bin = bindisc.fit_transform(self.training[feature].values[:, np.newaxis])
                 feature_bin = pd.Series(feature_bin[:, 0], index=self.training.index)
-                cont_tab = pd.crosstab(feature_bin, self.training["DepVar"], margins=False)
-                chisq_dict[feature] = stats.chi2_contingency(cont_tab.values)[0:2]
-        if categorical_flist:
+                cont_tab = pd.crosstab(feature_bin, self.training["Response"], margins=False)
+                chisq_dict[feature] = chi2_contingency(cont_tab.values)[0:2]
+        if len(categorical_flist)>0:
             for feature in categorical_flist:
-                cont_tab = pd.crosstab(self.training[feature], self.training["DepVar"], margins=False)
-                chisq_dict[feature] = stats.chi2_contingency(cont_tab.values)[0:2]
+                cont_tab = pd.crosstab(self.training[feature], self.training["Response"], margins=False)
+                chisq_dict[feature] = chi2_contingency(cont_tab.values)[0:2]
 
         df_chisq_rank = pd.DataFrame(chisq_dict, index=["Chi-Squared", "p-value"]).transpose()
         df_chisq_rank.sort_values("Chi-Squared", ascending=False, inplace=True)
@@ -195,7 +246,7 @@ class FeatureEngineer:
         X = self.training[vd]
         for var in self.training.drop(columns=vd).columns:
             Y = self.training[var]
-            model = self.training.OLS(X, Y).fit()
+            model = sm.OLS(X, Y).fit()
             predictions = model.predict(X)
             reg_results = reg_results.append({'variable': var, 'Coef': model.params[0], 'std_err': model.bse[0],
                                               'pvalue': model.pvalues[0], 'adj_R2': model.rsquared_adj},
@@ -203,7 +254,6 @@ class FeatureEngineer:
             reg_results.sort_values(by='adj_R2', inplace=True, ascending=False)
 
         return np.array(reg_results.head(n)['variable'].values)
-
 
     def fisher_score(self, vd, n):
         self.report.append('fisher_score')
@@ -223,7 +273,6 @@ class FeatureEngineer:
         results.sort_values(ascending=False, inplace=True)
         return np.array(results.head(n).index)
 
-
     def entropy(self):
         ds = self.training
         if len(ds.unique()) > 1:
@@ -232,8 +281,6 @@ class FeatureEngineer:
             return np.sum([-p_c0 * np.log2(p_c0), -p_c1 * np.log2(p_c1)])
         else:
             return 0
-
-
 
     def all_inf_gain(self, vd, n):
         self.report.append('all_inf_gain')
@@ -303,47 +350,76 @@ class FeatureEngineer:
         res = dict(sorted(res.items(), key=lambda kv: kv[1], reverse=True))
         return np.array(pd.DataFrame(res, index=[0]).T.head(n).index)
 
-    def extra_Trees_Classifier(self, vd, n):
+    def extra_Trees_Classifier(self, n):
         self.report.append('extra_Trees_Classifier')
         ''' choosing number of features based on their importance'''
         ds = self.training
-        X = ds.drop(columns=vd)
-        Y = ds[vd]
+        X = ds.drop(columns='Response')
+        Y = ds['Response']
         model = ExtraTreesClassifier()
         model.fit(X, Y)
-        res = dict(zip(ds.drop(columns=vd).columns, model.feature_importances_))
+        res = dict(zip(ds.drop(columns='Response').columns, model.feature_importances_))
         res = dict(sorted(res.items(), key=lambda kv: kv[1], reverse=True))
         return np.array(pd.DataFrame(res, index=[0]).T.head(n).index)
 
-    def feature_selection(*arg):
+    def feature_selection_rank(self,treshold, *arg):
+        print('before\n')
+        print(self.training.head())
         VARS = []
         for array in arg:
             VARS.append(array)
         VARS = [id_ for sublist in VARS for id_ in sublist]
-        counts = [VARS.count(i) for i in VARS]
-        return dict(zip(VARS, counts))
+        ratios = [VARS.count(i) / len(arg) for i in VARS]
+        ratios = dict(sorted(dict(zip(VARS, ratios)).items(), key=lambda x: x[1], reverse=True))
+        kept_vars = list({k for (k, v) in ratios.items() if v > treshold})
+        self.training = self.training[kept_vars]
+        self.unseen = self.unseen[kept_vars]
+        print('after\n')
+        print(self.training.head())
 
-    def correlation_feature_selection(self):
-        for var in self.training.columns:
-            correlation = self.training[var,'Response'].corr()
-            #To be done
+    def correlation_feature_ordering(self):
+        self.report.append('Correlation_Feature_ordering')
+        vars_corr = {}
+        feature_order = self.training.drop('Response',axis=1).columns
+        for var in range(len(feature_order)):
+            try:
+                correlation = np.abs(self.training[[feature_order[var],'Response']].astype(float).corr().iloc[0,1])
+                vars_corr[feature_order[var]] = correlation
+            except:
+                pass
 
+        return dict(sorted(vars_corr.items(), key=lambda kv: kv[1], reverse=True))
 
     def correlation_based_feature_selection(self,feature_importance_function):
+        self.report.append('Correlation_Based_Feature_selection')
         #Returns variables sorted from most importance to least important
-        variables_list = feature_importance_function(self.training)
+        variables_list = feature_importance_function()
+        keys = list(variables_list.keys())
         to_delete = []
-        iter_ = iter(range(len(variables_list)))
-        for i in range(len(variables_list)):
-            if i in to_delete:
-                next(iter,None)
-            var1 = variables_list[i]
-            for j in range(len(variables_list)):
-                var2 = variables_list[j]
-                correlation = self.training[var1,var2].corr()
-                if correlation > 0.8:
-                    to_delete.append(j)
+        iter_ = iter(range(1,len(variables_list)-1))
+        corrs = np.abs(self.training[keys].astype('float64').corr())
+        for i in iter_:
+            key = keys[i]
+            if key in to_delete:
+                next(iter_,None)
+            for j in range(0,i):
+                key2 = keys[j]
+                if key2 not in to_delete:
+                    correlation = corrs[key].ix[key2]
+                    if correlation > 0.8:
+                        to_delete.append(key2)
+        for key in to_delete:
+            del variables_list[key]
+        self.training = self.training[list(variables_list.keys())+['Response']]
 
-        self.training = self.training[variables_list]
+    def ga_feature_selection(self,model):
+
+        feature_selection = FeatureSelectionGA(model,
+                                               self.training.loc[:, self.training.columns != "Response"].values,
+                                               self.training["Response"].values)
+        feature_selection.generate(n_pop=100, ngen=5)
+
+        return self.training.loc[:, self.training.columns != "Response"].columns[np.where(np.array(feature_selection.best_ind)==1)]
+
 
 

@@ -1,7 +1,7 @@
 import sys
 import pandas as pd
 from datetime import datetime, date
-
+from sklearn.preprocessing import OneHotEncoder
 
 class Dataset:
     """ Loads and prepares the data
@@ -13,6 +13,7 @@ class Dataset:
 
     def __init__(self, full_path):
         self.rm_df = pd.read_excel(full_path)
+        self.rm_df.set_index('ID',inplace=True)
         self._drop_duplicates(full_path)
         self._drop_metadata_features()
         #self._drop_doubleback_features()
@@ -20,61 +21,35 @@ class Dataset:
         #self._label_encoder()
         #self._as_category()
         self._days_since_customer()
-
+        self._generate_dummies()
         print("Finnished loading data!")
 
+    def _generate_dummies(self):
+        features_to_enconde = ['Education', 'Marital_Status']
+        columns = []
+        idxs = []
+        control = 0
+        for column in features_to_enconde:
+            for index in range(len(self.rm_df[column].unique()) - 1):
+                columns.append(column + '_' + self.rm_df[column].unique()[index])
+                idxs.append(control)
+                control = control + 1
+            control = control + 1
+        # encode categorical features from training data as a one-hot numeric array.
+        enc = OneHotEncoder(handle_unknown='ignore')
+
+        Xtr_enc = enc.fit_transform(self.rm_df[features_to_enconde].values).toarray()
+        # update training data
+        df_temp = pd.DataFrame(Xtr_enc[:,idxs], index=self.rm_df.index, columns=columns)
+        self.rm_df = pd.concat([self.rm_df, df_temp], axis=1)
+        for c in columns:
+            self.rm_df[c] = self.rm_df[c].astype('category')
+        self.rm_df.drop(features_to_enconde,axis=1,inplace = True)
 
     def _drop_duplicates(self,full_path):
-        """Nós temos dois tipos de dados repetidos. Dados repetidos com o Response diferente e dados repetidos com o Response
-        igual. O que significa que temos de ter cuidado, porque têm de ser tratados de maneira diferente
-        Primeiramente vamos eliminar os dados que estão repetidos com Response diferente. No máximo temos 3 casos repetidos,
-        pelo que tendo 2 para 1, não representa uma diferença significativamente grande para ficar com 1 individuo do grupo que
-        tem mais. Depois, com os dados que ficamos, vamos ver os que têm duplicados, e neste caso vamos ficar sempre com
-        um deles. Por default, o primeiro que aparece."""
-
-        ds = self.rm_df
-        ds = ds.drop(columns=["ID", "Response"])
-        da = pd.read_excel(full_path)
-
-        # Colunas do dataset numa lista e retirar a primeira, aka ID
-        colunas = list(da)
-        colunas.pop(0)
-
-        # Obter o count e a lista com os ID's dos repetidos com o target.
-        target_count = da.groupby(colunas)['ID'].count()
-        target_list = da.groupby(colunas)['ID'].apply(list)
-        target = pd.concat([target_count, target_list], axis=1)
-        target.columns = ['count', 'lista']
-
-        # Obter o count e a lista com os ID's dos repetidos sem o target.
-        no_target_count = da.groupby(list(ds))['ID'].count()
-        no_target_list = da.groupby(list(ds))['ID'].apply(list)
-        no_target = pd.concat([no_target_count, no_target_list], axis=1)
-        no_target.columns = ['count', 'lista']
-
-        ## Comparar os resultados do "com target" e do "sem target" e fazer a intersecção dos mesmos. Porque se estão iguais
-        ## nos dois lados, significa que nunca há casos em que os Response são diferentes.
-        no_target_set = set(map(tuple, no_target.lista))
-        target_set = set(map(tuple, target.lista))
-        id_intercept = no_target_set.intersection(target_set)
-        id_intercept = list(id_intercept)
-
-        # Juntar os ID's numa lista para depois ficar apenas com estes casos
-        ids = []
-        for i in id_intercept:
-            for j in i:
-                ids.append(j)
-
-        # Fiz isto para evitar perder os IDS, usando um merge atraves do index
-        frame = pd.read_excel("ml_project1_data.xlsx")
-        frame = frame.loc[frame['ID'].isin(ids)]
-        sem_ID = frame.drop(columns=["ID"])
-        sem_ID = sem_ID.drop_duplicates(keep="first")
-        frame_ID = frame["ID"]
-        merged = sem_ID.merge(frame_ID.to_frame(), left_index=True, right_index=True, how='inner')
-        merged.index = merged['ID']
-        ds = merged.drop(columns='ID').copy()
-        del merged
+        print(self.rm_df.shape)
+        self.rm_df.drop_duplicates(inplace = True)
+        self.rm_df.drop_duplicates(subset = list(set(self.rm_df.columns) - set('Response')), keep = False)
 
     def _drop_metadata_features(self):
         #To be used for profit calculations
@@ -137,7 +112,7 @@ class Dataset:
         self.rm_df["Response"] = self.rm_df["Response"].astype('category')
 
     def _days_since_customer(self):
-        """ Encodes Dt_Customer (nº days since customer)
+        """ Encodes Dt_Customer (n days since customer)
 
             Similarly to the label encoder, we have to transform the Dt_Customer in order to feed numerical
             quantities into our ML algorithms. Here we encode Dt_Customer into number the of days since, for
