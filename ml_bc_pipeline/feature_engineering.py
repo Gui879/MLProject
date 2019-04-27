@@ -44,7 +44,7 @@ class FeatureEngineer:
             dataset["RatioMeatProducts"] = dataset["MntMeatProducts"] / dataset["TotalMoneySpent"]
             dataset["RatioFishProducts"] = dataset["MntFishProducts"] / dataset["TotalMoneySpent"]
             dataset["RatioSweetProducts"] = dataset["MntSweetProducts"] / dataset["TotalMoneySpent"]
-            dataset["RatioGoldProdataset"] = dataset["MntGoldProds"] / dataset["TotalMoneySpent"]
+            dataset["RatioGoldProd"] = dataset["MntGoldProds"] / dataset["TotalMoneySpent"]
 
             # Changing income to 2 years
             dataset["Income2Years"] = dataset["Income"] * 2
