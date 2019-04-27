@@ -20,7 +20,8 @@ from collections import defaultdict
 from collections import Counter
 from numpy.random import RandomState
 from imblearn.over_sampling import SMOTENC,SMOTE,ADASYN
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder,PowerTransformer
+
 
 
 class Processor:
@@ -55,15 +56,17 @@ class Processor:
 
         #Deal with missing values
         self._impute_missing_values()
+
+        #Outlier Treatment
+        self.outlier_rank(False, 0.5, self._boxplot_outlier_detection(ranking = True), self._z_score_outlier_detection(3))
+        #outliers = self.mahalanobis_distance_outlier()
+        #self.training.drop(outliers,axis = 0,inplace = True)
+
         #Normalization
         self._normalize()
-        #Outlier Treatment
-        #outliers = self._boxplot_outlier_detection()
-        outliers = self.mahalanobis_distance_outlier()
-        self.training.drop(outliers,axis = 0,inplace = True)
+
         #Balancing
         self.SMOTE_NC()
-
 
         print("Preprocessing complete!")
 
@@ -105,6 +108,7 @@ class Processor:
                 self.training[column] = self._imputer.fit_transform(self.training[column].values.reshape(-1,1))
                 self.unseen[column] = self._imputer.transform(self.unseen[column].values.reshape(-1,1))
         for var in self.cat_vars:
+
             var_dict = self.convert_numeric_labelling(var)
             self.training[var] = self.training[var].astype(int)
             self.unseen[var] = self.unseen[var].astype(int)
@@ -117,6 +121,7 @@ class Processor:
 
             self.revert_numeric_labelling(var,var_dict)
         self.training[self.cat_vars] =self.training[self.cat_vars].astype('category')
+
         self.unseen[self.cat_vars] = self.unseen[self.cat_vars].astype('category')
     # DEALING WITH OUTLIERS
     ### UNIVARIATE OUTLIER DETECTION
@@ -201,7 +206,7 @@ class Processor:
         for key in z_score_outliers.keys(): z_score_outliers[key] = z_score_outliers[key].split(' ')
         return z_score_outliers
 
-    def _boxplot_outlier_detection(self, percent = 0.03, treshold=1.5):
+    def _boxplot_outlier_detection(self, percent = 0.03, treshold=1.5, ranking = False):
         self.report.append('_boxplot_outlier_detection')
         box_plot_outliers = []
         #For each var check ouytliers and their distance
@@ -213,14 +218,23 @@ class Processor:
                 Q1 = np.percentile(df, 25)
                 Q3 = np.percentile(df, 75)
                 ix1 = df.index[np.where(df.values > (Q3 + treshold * iqr_))[0]]
-                indexes = list(zip(ix1, df.ix[ix1].values - (Q3 + treshold * iqr_)))
+                indexes = list(zip(ix1, [var] * len(ix1), df.ix[ix1].values - (Q3 + treshold * iqr_)))
                 ix2 = df.index[np.where(df.values < (Q1 - treshold * iqr_))[0]]
-                indexes2 = list(zip(ix2, np.abs((df.ix[ix2].values + (Q1 - treshold * iqr_)))))
+                indexes2 = list(zip(ix2, [var] * len(ix2), np.abs((df.ix[ix2].values + (Q1 - treshold * iqr_)))))
                 indexes = indexes + indexes2
                 box_plot_outliers = box_plot_outliers + indexes
 
         #Sort outliers in descending order by their distance
-        box_plot_outliers.sort(key = lambda x: x[1],reverse = True)
+        box_plot_outliers.sort(key = lambda x: x[2],reverse = True)
+        if ranking:
+            box_plot_outliers = [(item[0],item[1]) for item in box_plot_outliers]
+            outlier_dict = {}
+            for item in box_plot_outliers:
+                if item[0] in outlier_dict.keys():
+                    outlier_dict[item[0]] = list(outlier_dict[item[0]]) + list([item[1]])
+                else:
+                    outlier_dict[item[0]] = [item[1]]
+            return outlier_dict
         #Delete repeating ids, leave the ones with the highest distance
         to_delete = []
         for x in range(len(box_plot_outliers)):
@@ -228,7 +242,7 @@ class Processor:
             for y in range(1,len(box_plot_outliers)):
                 b = box_plot_outliers[y]
                 if a[0] == b[0]:
-                    if a[1] > b[0]:
+                    if a[1] > b[1]:
                         to_delete.append(b)
                     else:
                         to_delete.append(a)
@@ -489,6 +503,24 @@ class Processor:
         # sampled_ds.index=ds.index
         sampled_ds.columns = ds.columns
         return round(sampled_ds, 2)
+
+    def power_transformation(self):
+        pt=PowerTransformer()
+        pt.fit(self.training.select_dtypes(exclude='category'))
+        temp = pd.DataFrame(pt.transform(self.training.select_dtypes(exclude='category')))
+        temp.index=self.training.select_dtypes(exclude='category').index
+        temp.columns=self.training.select_dtypes(exclude='category').columns
+        for col in self.training.select_dtypes(include='category'):
+            temp[col]=self.training[col]
+        self.training=temp
+        del temp
+        temp=pd.DataFrame(pt.transform(self.unseen.select_dtypes(exclude='category')))
+        temp.index = self.unseen.select_dtypes(exclude='category').index
+        temp.columns = self.unseen.select_dtypes(exclude='category').columns
+        for col in self.unseen.select_dtypes(include='category'):
+            temp[col]=self.unseen[col]
+        self.unseen=temp
+        print(temp)
 
     ### NORMALIZATION
     def _normalize(self):

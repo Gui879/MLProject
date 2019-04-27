@@ -13,7 +13,7 @@ from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.feature_selection import RFE, SelectKBest, f_classif
 from sklearn.linear_model import LogisticRegression
 import statsmodels.api as sm
-from sklearn.preprocessing import KBinsDiscretizer, MinMaxScaler
+from sklearn.preprocessing import KBinsDiscretizer, MinMaxScaler,PowerTransformer
 
 from ga_feature_selection.feature_selection_ga import FeatureSelectionGA
 
@@ -31,9 +31,11 @@ class FeatureEngineer:
         #self.linear_regression_selection('Response',10)
         #self.lda_extraction()
         #self.linear_regression_selection('Response',10)
-        components = self.pca_extraction()
-        self.training = pd.concat([self.training,components],axis = 1)
-        self.correlation_based_feature_selection(self.correlation_feature_ordering)
+        #components = self.pca_extraction()
+        #self.training = pd.concat([self.training,components],axis = 1)
+
+        #self.correlation_based_feature_selection(self.correlation_feature_ordering)
+
 
         print("Feature Engeneering Completed!")
         #self.ga_feature_selection(LogisticRegression(solver = 'lbfgs'))
@@ -133,13 +135,12 @@ class FeatureEngineer:
         explained = 0
         final_components = 0
         for component in pca.explained_variance_ratio_:
-            print(component)
             explained = explained + component
             final_components = final_components + 1
             if explained >= threshold:
                 break
         pca_components = pca.components_[:final_components]
-        return pd.DataFrame(pca_components.T, columns = ['C_' + str(col) for col in range(final_components)])
+        return pd.DataFrame(pca_components.T, columns = ['C_' + str(col) for col in range(final_components)],index = self.training.index)
 
     def _drop_constant_features(self):
         self.report.append('_drop_constant_features')
@@ -238,7 +239,6 @@ class FeatureEngineer:
 
         return np.array(reg_results.head(n)['variable'].values)
 
-
     def fisher_score(self, vd, n):
         self.report.append('fisher_score')
         ds = self.training
@@ -257,7 +257,6 @@ class FeatureEngineer:
         results.sort_values(ascending=False, inplace=True)
         return np.array(results.head(n).index)
 
-
     def entropy(self):
         ds = self.training
         if len(ds.unique()) > 1:
@@ -266,8 +265,6 @@ class FeatureEngineer:
             return np.sum([-p_c0 * np.log2(p_c0), -p_c1 * np.log2(p_c1)])
         else:
             return 0
-
-
 
     def all_inf_gain(self, vd, n):
         self.report.append('all_inf_gain')
@@ -360,7 +357,6 @@ class FeatureEngineer:
         self.training = self.training[kept_vars]
         self.unseen = self.unseen[kept_vars]
 
-
     def correlation_feature_ordering(self):
         self.report.append('Correlation_Feature_ordering')
         vars_corr = {}
@@ -374,29 +370,27 @@ class FeatureEngineer:
 
         return dict(sorted(vars_corr.items(), key=lambda kv: kv[1], reverse=True))
 
-
     def correlation_based_feature_selection(self,feature_importance_function):
         self.report.append('Correlation_Based_Feature_selection')
         #Returns variables sorted from most importance to least important
         variables_list = feature_importance_function()
         keys = list(variables_list.keys())
-        print(keys)
         to_delete = []
-        iter_ = iter(range(len(variables_list)-1))
+        iter_ = iter(range(1,len(variables_list)-1))
+        corrs = np.abs(self.training[keys].astype('float64').corr())
         for i in iter_:
             key = keys[i]
             if key in to_delete:
                 next(iter_,None)
-            for j in range(1,len(variables_list)):
+            for j in range(0,i):
                 key2 = keys[j]
-                correlation = self.training[[key,key2]].corr()
-                if correlation > 0.8:
-                    to_delete.append(key2)
-
+                if key2 not in to_delete:
+                    correlation = corrs[key].ix[key2]
+                    if correlation > 0.8:
+                        to_delete.append(key2)
         for key in to_delete:
             del variables_list[key]
-        self.training = self.training[keys]
-
+        self.training = self.training[list(variables_list.keys())+['Response']]
 
     def ga_feature_selection(self,model):
 
