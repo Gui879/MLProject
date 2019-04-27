@@ -124,7 +124,7 @@ def main():
 
         xtclf_param_grid = {'xtree__min_samples_split':[2,5,10],
                             'xtree__min_samples_leaf':[1,3,6],
-                            'criterion':['gini','entropy']}
+                            'xtree__criterion':['gini','entropy']}
         xtclf = extraTreesClassifier(fe.training, xtclf_param_grid, seed)
         #report(xtclf.best_estimator_, fe.unseeen, xtclf.best_params_,xtclf.__name__)
 

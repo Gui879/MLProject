@@ -64,9 +64,9 @@ class Processor:
         #self.outlier_rank(False,0.5,self._z_score_outlier_detection(3),self._boxplot_outlier_detection())
 
         self.mahalanobis_distance_outlier()
-        print("===============================")
-        print(self.outlier_rank(True, 0.5, self._boxplot_outlier_detection(ranking = True), self._z_score_outlier_detection(3)))
-        print("===============================")
+        #print("===============================")
+        print(self.outlier_rank(False, 0.5, self._boxplot_outlier_detection(ranking = True), self._z_score_outlier_detection(3)))
+        #print("===============================")
         #outliers = self.mahalanobis_distance_outlier()
         #self.training.drop(outliers,axis = 0,inplace = True)
 
@@ -419,6 +419,8 @@ class Processor:
 
                     else:
                         novo_ds[var][novo_ds.index == key] = np.percentile(ds[var], 25) - 1.5 * iqr(ds[var])
+                else: novo_ds=novo_ds[novo_ds.index!=key]
+
         return novo_ds
 
     def outlier_rank(self,smoothing,treshold,*arg):
@@ -431,7 +433,8 @@ class Processor:
         keys = []
         for array in arg:
             if isinstance(array, dict):
-                keys.extend([key for key in array.keys()])
+                for key in array.keys():
+                    keys.extend([key for _ in range(len(array[key]))])
             else:
                 if (len(np.array(array).shape)) < 2:
                     ids.extend([id_ for id_ in array])
@@ -439,8 +442,11 @@ class Processor:
                     IDS.extend([id_ for sublist in array for id_ in sublist])
 
         full = IDS + keys + ids
-        ratios = [full.count(i)/len(arg) for i in full]
-
+        counts = np.array([full.count(i) for i in full]).reshape(-1,1)
+        scaler = MinMaxScaler()
+        scaler.fit(counts)
+        counts=scaler.transform(counts)
+        counts=[item for sublist in counts for item in sublist]
         pass_for_full = [thing for thing in arg]
 
         def get_full_outlier_dict(full_dict):
@@ -461,13 +467,14 @@ class Processor:
             return dd
 
         outlier_info_dict = get_full_outlier_dict(pass_for_full)
-        ratios=dict(sorted(dict(zip(full, ratios)).items(), key=lambda x: x[1], reverse=True))
-        outliers=list({key for (key, value) in ratios.items() if value > treshold})
+        counts=dict(sorted(dict(zip(full, counts)).items(), key=lambda x: x[1], reverse=True))
+        outliers=list({key for (key, value) in counts.items() if value > treshold})
 
         if smoothing:
             self.report.append('uni_iqr_rank_outlier_smoothing')
             outlier_info = dict([(k, v) for (k, v) in outlier_info_dict.items() if k in outliers])
             self.training=self.uni_iqr_outlier_smoothing(outlier_info,self.training)
+
         else:
             self.training=self.training[~self.training.index.isin(outliers)]
 
