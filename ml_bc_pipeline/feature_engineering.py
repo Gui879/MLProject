@@ -31,7 +31,7 @@ class FeatureEngineer:
         #self.linear_regression_selection('Response',10)
         #self.lda_extraction()
         #self.linear_regression_selection('Response',10)
-<<<<<<< HEAD
+
         #self.pca_extraction()
 
         #components = self.pca_extraction()
