@@ -16,7 +16,7 @@ import statsmodels.api as sm
 from sklearn.preprocessing import KBinsDiscretizer, MinMaxScaler,PowerTransformer
 
 from ga_feature_selection.feature_selection_ga import FeatureSelectionGA
-
+from prince import MFA
 
 class FeatureEngineer:
 
@@ -25,19 +25,17 @@ class FeatureEngineer:
         self.report=[]
         self.training = training
         self.unseen = unseen
-        #self._extract_business_features()
+        self.seed = seed
+        self._extract_business_features()
 
 
         #self.linear_regression_selection('Response',10)
         #self.lda_extraction()
         #self.linear_regression_selection('Response',10)
-<<<<<<< HEAD
-        #self.pca_extraction()
-
-        #components = self.pca_extraction()
-        #print(components)
-
+        #components = self.multi_factor_analysis(self.training.shape[1],10)
+        #self.training = pd.concat([self.training, components], axis=1)
         #self.correlation_based_feature_selection(self.correlation_feature_ordering)
+        #self.rank_features_chi_square()
 
         #self.feature_selection_rank(0.5,self.anova_F_selection('Response',20),self.extra_Trees_Classifier(20))
         #print("Feature Engeneering Completed!")
@@ -209,12 +207,36 @@ class FeatureEngineer:
             self.unseen[feature] = np.round(self._bx_cx_trans_dict[best_trans_label](self.unseen[feature]), 4)
         self.box_cox_features = num_features_BxCx
 
+    def multi_factor_analysis(self, n_components, n_iterations):
+        X = self.training.drop(columns = ['Response'])
+        groups = {'categorical': X.loc[:, self.training.dtypes != 'category'].columns,'numerical': X.loc[:, self.training.dtypes == 'category'].columns}
+        mfa = MFA(
+        groups = groups,
+        n_components = n_components,
+        n_iter = n_iterations,
+        copy = True,
+        check_input = True,
+        engine = 'auto',
+        random_state = self.seed)
+        mfa.fit(X)
+        inertia = mfa.explained_inertia_
+        components = mfa.row_coordinates(X)
+        t = 0
+        f_components = []
+        for col in range(len(inertia)):
+            t += inertia[col]
+            f_components.append(components[col])
+            if t >= 0.8:
+                break
+        return pd.DataFrame(f_components, columns = ['C_' + str(i) for i in range(len(f_components))])
 
     ########FEATURE SELECTION################################
-    def rank_features_chi_square(self, continuous_flist, categorical_flist):
+
+    def rank_features_chi_square(self):
         self.report.append('rank_features_chi_square')
         chisq_dict = {}
-
+        continuous_flist = self.training.drop('Response',axis = 1).loc[:,self.training.dtypes != 'category'].columns
+        categorical_flist = self.training.drop('Response',axis = 1).loc[:, self.training.dtypes == 'category'].columns
         if len(continuous_flist)>0:
             bindisc = KBinsDiscretizer(n_bins=10, encode='ordinal', strategy="uniform")
             for feature in continuous_flist:
@@ -410,6 +432,7 @@ class FeatureEngineer:
                         to_delete.append(key2)
         for key in to_delete:
             del variables_list[key]
+        print(len(variables_list.keys()))
         self.training = self.training[list(variables_list.keys())+['Response']]
 
     def ga_feature_selection(self,model):

@@ -61,11 +61,12 @@ class Processor:
         outliers = self._boxplot_outlier_detection()
         self.training.drop(outliers,axis = 0,inplace = True)
 
-        self.outlier_rank(False,0.5,self._z_score_outlier_detection(3),self._boxplot_outlier_detection())
+        #self.outlier_rank(False,0.5,self._z_score_outlier_detection(3),self._boxplot_outlier_detection())
 
-        self.mahalanobis_distance_outlier()
+        #self.mahalanobis_distance_outlier()
 
-        self.outlier_rank(False, 0.5, self._boxplot_outlier_detection(ranking = True), self._z_score_outlier_detection(3))
+        #self.outlier_rank(False, 0.5, self._boxplot_outlier_detection(ranking = True), self._z_score_outlier_detection(3))
+
         #outliers = self.mahalanobis_distance_outlier()
         #self.training.drop(outliers,axis = 0,inplace = True)
 
@@ -73,7 +74,7 @@ class Processor:
         self._normalize()
 
         #Balancing
-        self.SMOTE_NC()
+        #self.SMOTE_NC()
 
         print("Preprocessing complete!")
 
@@ -106,7 +107,7 @@ class Processor:
             loc, scale = norm.fit(data)
             n = norm(loc = loc, scale = scale)
             _, p_value = kstest(self.training[column].values, n.cdf)
-            if p_value < 0.05:
+            if p_value > 0.05:
                 self._imputer = SimpleImputer(missing_values=np.nan, strategy='mean')
                 self.training[column] = self._imputer.fit_transform(self.training[column].values.reshape(-1,1))
                 self.unseen[column] = self._imputer.transform(self.unseen[column].values.reshape(-1,1))
@@ -412,11 +413,12 @@ class Processor:
         novo_ds = ds.copy()
         for key in DOAGO_results.keys():
             for var in DOAGO_results[key]:
-                if ds[var][ds.index == key].values > np.mean(ds[var]):
-                    novo_ds[var][novo_ds.index == key] = np.percentile(ds[var], 75) + 1.5 * iqr(ds[var])
+                if var != 'multi/unknown':
+                    if ds[var][ds.index == key].values > np.mean(ds[var]):
+                        novo_ds[var][novo_ds.index == key] = np.percentile(ds[var], 75) + 1.5 * iqr(ds[var])
 
-                else:
-                    novo_ds[var][novo_ds.index == key] = np.percentile(ds[var], 25) - 1.5 * iqr(ds[var])
+                    else:
+                        novo_ds[var][novo_ds.index == key] = np.percentile(ds[var], 25) - 1.5 * iqr(ds[var])
         return novo_ds
 
     def outlier_rank(self,smoothing,treshold,*arg):
@@ -442,12 +444,14 @@ class Processor:
         pass_for_full = [thing for thing in arg]
 
         def get_full_outlier_dict(full_dict):
-            print('before\n')
-            print(len(self.training))
             dd = defaultdict(list)
             for d in ([arg_ for arg_ in full_dict]):
-                for key, value in d.items():
-                    dd[key].append(value)
+                if isinstance(d,dict):
+                    for key, value in d.items():
+                        dd[key].append(value)
+                else:
+                    for id in d:
+                        dd[id]='multi/unknown'
             dd = dict(dd)
             for key in dd.keys():
                 # flattning the values of the dicts
@@ -466,9 +470,6 @@ class Processor:
             self.training=self.uni_iqr_outlier_smoothing(outlier_info,self.training)
         else:
             self.training=self.training[~self.training.index.isin(outliers)]
-
-        print('after\n')
-        print(len(self.training))
 
     def decide_on_and_get_outliers(self,outlier_rank_result, treshold):
         '''pass the ranking here and choose the records that appear more than  treshold times to be our outliers'''
