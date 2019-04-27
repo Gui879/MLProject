@@ -63,10 +63,16 @@ class Processor:
 
         #self.outlier_rank(False,0.5,self._z_score_outlier_detection(3),self._boxplot_outlier_detection())
 
+
         self.mahalanobis_distance_outlier()
         #print("===============================")
         print(self.outlier_rank(False, 0.5, self._boxplot_outlier_detection(ranking = True), self._z_score_outlier_detection(3)))
         #print("===============================")
+
+        #self.mahalanobis_distance_outlier()
+
+        #self.outlier_rank(False, 0.5, self._boxplot_outlier_detection(ranking = True), self._z_score_outlier_detection(3))
+
         #outliers = self.mahalanobis_distance_outlier()
         #self.training.drop(outliers,axis = 0,inplace = True)
 
@@ -107,7 +113,7 @@ class Processor:
             loc, scale = norm.fit(data)
             n = norm(loc = loc, scale = scale)
             _, p_value = kstest(self.training[column].values, n.cdf)
-            if p_value < 0.05:
+            if p_value > 0.05:
                 self._imputer = SimpleImputer(missing_values=np.nan, strategy='mean')
                 self.training[column] = self._imputer.fit_transform(self.training[column].values.reshape(-1,1))
                 self.unseen[column] = self._imputer.transform(self.unseen[column].values.reshape(-1,1))
