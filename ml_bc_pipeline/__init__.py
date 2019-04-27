@@ -255,7 +255,7 @@ def main():
         with open('Pipelines/version'+str(test_version)+'_'+str(seed)+'.txt', 'w') as file:
             file.write(json.dumps(pipeline))
 
-        averages = calculate_averages(['auroc','precision','recall','f1_score','best_threshold', 'best_profit'])
+        averages = calculate_averages(['auroc','precision','recall','f1_score','best_threshold', 'best_profit_ratio','best_profit'])
         averages.to_csv('Averages/version' + str(test_version) +'_'+str(seed)+'.csv')
 
 if __name__ == "__main__":
