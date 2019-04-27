@@ -69,7 +69,7 @@ def main():
     pipeline['preprocessing'] = pr.report
 
     # +++++++++++++++++ 4) feature engineering
-    fe = FeatureEngineer(pr.training, pr.unseen)
+    fe = FeatureEngineer(pr.training, pr.unseen,0)
     pipeline['feature_engineering'] = fe.report
 
     for seed in range(5):
@@ -178,8 +178,8 @@ def main():
             pipeline['preprocessing'] = pr.report
             print('processor')
             # +++++++++++++++++ 4) feature engineering
-            fe = FeatureEngineer(pr.training, pr.unseen)
-            pipeline['feature_engineering'] = fe.repor
+            fe = FeatureEngineer(pr.training, pr.unseen,seed)
+            pipeline['feature_engineering'] = fe.report
             print('feature_engineering')
             # =====================================
             # NEURAL NETWORK

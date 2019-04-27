@@ -61,6 +61,8 @@ class Processor:
         outliers = self._boxplot_outlier_detection()
         self.training.drop(outliers,axis = 0,inplace = True)
 
+        self.outlier_rank(False,0.5,self._z_score_outlier_detection(3),self._boxplot_outlier_detection())
+
         self.mahalanobis_distance_outlier()
 
         #Normalization
@@ -433,6 +435,8 @@ class Processor:
         pass_for_full = [thing for thing in arg]
 
         def get_full_outlier_dict(full_dict):
+            print('before\n')
+            print(len(self.training))
             dd = defaultdict(list)
             for d in ([arg_ for arg_ in full_dict]):
                 for key, value in d.items():
@@ -455,6 +459,9 @@ class Processor:
             self.training=self.uni_iqr_outlier_smoothing(outlier_info,self.training)
         else:
             self.training=self.training[~self.training.index.isin(outliers)]
+
+        print('after\n')
+        print(len(self.training))
 
     def decide_on_and_get_outliers(self,outlier_rank_result, treshold):
         '''pass the ranking here and choose the records that appear more than  treshold times to be our outliers'''

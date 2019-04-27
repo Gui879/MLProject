@@ -31,14 +31,15 @@ class FeatureEngineer:
         #self.linear_regression_selection('Response',10)
         #self.lda_extraction()
         #self.linear_regression_selection('Response',10)
-        self.pca_extraction()
+        #self.pca_extraction()
 
-        components = self.pca_extraction()
-        print(components)
+        #components = self.pca_extraction()
+        #print(components)
 
         #self.correlation_based_feature_selection(self.correlation_feature_ordering)
 
-        print("Feature Engeneering Completed!")
+        #self.feature_selection_rank(0.5,self.anova_F_selection('Response',20),self.extra_Trees_Classifier(20))
+        #print("Feature Engeneering Completed!")
         #self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
 
 
@@ -354,15 +355,19 @@ class FeatureEngineer:
         return np.array(pd.DataFrame(res, index=[0]).T.head(n).index)
 
     def feature_selection_rank(self,treshold, *arg):
+        print('before\n')
+        print(self.training.head())
         VARS = []
         for array in arg:
             VARS.append(array)
         VARS = [id_ for sublist in VARS for id_ in sublist]
         ratios = [VARS.count(i) / len(arg) for i in VARS]
         ratios = dict(sorted(dict(zip(VARS, ratios)).items(), key=lambda x: x[1], reverse=True))
-        kept_vars = list({k for (k, v) in a.items() if v > treshold})
+        kept_vars = list({k for (k, v) in ratios.items() if v > treshold})
         self.training = self.training[kept_vars]
         self.unseen = self.unseen[kept_vars]
+        print('after\n')
+        print(self.training.head())
 
 
     def correlation_feature_ordering(self):
