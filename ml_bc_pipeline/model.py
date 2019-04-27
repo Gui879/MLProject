@@ -12,6 +12,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import VotingClassifier, AdaBoostClassifier, GradientBoostingClassifier
 import xgboost as xgb
 from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.model_selection import StratifiedKFold
+from bayes_opt import BayesianOptimization
 
 def grid_search_MLP(training, param_grid, seed, cv=5):
     """ Multi-layer Perceptron classifier hyperparameter estimation using grid search with cross-validation.
@@ -38,10 +40,30 @@ def grid_search_MLP(training, param_grid, seed, cv=5):
     pipeline = Pipeline([("mlpc", MLPClassifier(random_state=seed))])
     clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
     clf_gscv.fit(training.loc[:, (training.columns != "Response")].values, training["Response"].values)
-
     return clf_gscv
 
+def bayes_optimization_MLP(training, param_grid, seed, cv=5):
+    #Bayes
+    n_param_grid = {}
+    for key, value in param_grid.items():
+        key = key.replace("mlpc" + '__', '')
+        n_param_grid[key] = (0, len(value)-1)
 
+    def ob_function(hidden_layer_sizes, learning_rate_init):
+        skf = StratifiedKFold(n_splits=cv, shuffle=True)
+        for train_index, test_index in skf.split(training.loc[:, (training.columns != "Response")].values,training["Response"].values):
+            train = training.iloc[train_index]
+            test = training.iloc[test_index]
+            hidden_layer_sizes = param_grid['mlpc__hidden_layer_sizes'][int(round(hidden_layer_sizes,0))]
+            learning_rate_init = param_grid['mlpc__learning_rate_init'][int(round(learning_rate_init,0))]
+            model  = MLPClassifier(random_state=seed, hidden_layer_sizes=hidden_layer_sizes, learning_rate_init=learning_rate_init)
+            model.fit(train.loc[:, (train.columns != "Response")].values, train["Response"].values)
+            y_pred = model.predict(test.drop('Response',axis = 1))
+            return profit(test['Response'],y_pred)
+
+
+    b_optimizer = BayesianOptimization(f=ob_function, pbounds=n_param_grid, random_state=1)
+    b_optimizer.maximize(n_iter = 300, init_points = 100)
 
 def decision_tree(training, param_grid, seed, cv=5):
 
@@ -71,7 +93,6 @@ def logistic_regression(training, param_grid, seed, cv=5):
 
     return clf_gscv
 
-
 def extraTreesClassifier(training, param_grid, seed, cv = 5):
 
     pipeline = Pipeline([ ("xtree",  ExtraTreesClassifier(random_state = seed))])
@@ -86,18 +107,15 @@ def adaboost(training,seed):
     clf.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
     return  clf
 
-
 def gradientBoosting(training, seed):
     clf = GradientBoostingClassifier(n_estimators=20, learning_rate = 0.1, max_features=2, max_depth = 2, random_state = seed)
     clf.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
     return  clf
 
-
 def ensemble(training, classifiers):
     clf = VotingClassifier(estimators=list(classifiers.items()), voting='soft')
     clf.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
     return clf
-
 
 def xgboost(training,seed):
     xgb_model = xgb.XGBClassifier(random_state=seed).fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
@@ -184,7 +202,6 @@ def profit_curve(y_true, y_score, print_graph):
     total_revenue = np.sum(y_true) * (revenue_answer - expense_answer)
     revenue_ratio = best_revenue/total_revenue
     return t, revenue_ratio, best_revenue
-
 
 def profit(y_true, y_score):
     thresholds, c = np.arange(0, 1, 0.025), 1

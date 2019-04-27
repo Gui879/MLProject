@@ -124,7 +124,7 @@ def main():
 
         xtclf_param_grid = {'xtree__min_samples_split':[2,5,10],
                             'xtree__min_samples_leaf':[1,3,6],
-                            'criterion':['gini','entropy']}
+                            'xtree__criterion':['gini','entropy']}
         xtclf = extraTreesClassifier(fe.training, xtclf_param_grid, seed)
         #report(xtclf.best_estimator_, fe.unseeen, xtclf.best_params_,xtclf.__name__)
 
@@ -219,8 +219,8 @@ def main():
             # X TREE CLASSIFIER
             # =====================================
 
-            xtclf.best_estimator_ = xtclf.best_estimator_.best_estimator_.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
-            report(xtclf.best_estimator_, fe.unseen, xtclf.best_params_, xtclf.best_estimator_.__name__)
+            xtclf.best_estimator_ = xtclf.best_estimator_.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
+            report(xtclf.best_estimator_, fe.unseen, xtclf.best_params_, 'xtree')
             # =====================================
             # XGBOOST
             # =====================================
