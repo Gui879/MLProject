@@ -64,15 +64,16 @@ def main():
     # +++++++++++++++++ 2) split into train and unseen
     DF_train, DF_unseen = train_test_split(ds.copy(), test_size=0.2, stratify=ds["Response"], random_state=0)
 
-    # +++++++++++++++++ 3) preprocess, based on train
-    pr = Processor(DF_train, DF_unseen, 0)
-    pipeline['preprocessing'] = pr.report
 
-    # +++++++++++++++++ 4) feature engineering
-    fe = FeatureEngineer(pr.training, pr.unseen,0)
-    pipeline['feature_engineering'] = fe.report
 
     for seed in range(5):
+        # +++++++++++++++++ 3) preprocess, based on train
+        pr = Processor(DF_train, DF_unseen, seed)
+        pipeline['preprocessing'] = pr.report
+
+        # +++++++++++++++++ 4) feature engineering
+        fe = FeatureEngineer(pr.training, pr.unseen, seed)
+        pipeline['feature_engineering'] = fe.report
 
 
         # =====================================
@@ -91,7 +92,7 @@ def main():
         # =====================================
 
         dt_param_grid = {'dt__criterion': ["entropy", "gini"],
-                         'dt__max_features': [3, 5, 7, None],
+                         'dt__max_features': [None],
                          "dt__max_depth": [3, 4, 5, 6],
                          "dt__min_samples_split": [30, 50, 70]}
         dt_gscv = decision_tree(fe.training, dt_param_grid, seed)
@@ -285,8 +286,6 @@ def main():
             ensemble_estimator = ensemble_estimator.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
             report(ensemble_estimator, fe.unseen, classifiers.keys(), model_name='ensemble')
             '''
-
-
 
         log.to_csv('Logs/' + 'version' + str(test_version)+'_'+str(seed)+'.csv')
         with open('Pipelines/version'+str(test_version)+'_'+str(seed)+'.txt', 'w') as file:

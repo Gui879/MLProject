@@ -21,7 +21,8 @@ from collections import Counter
 from numpy.random import RandomState
 from imblearn.over_sampling import SMOTENC,SMOTE,ADASYN
 from sklearn.preprocessing import OneHotEncoder,PowerTransformer
-
+import seaborn as sb
+from sklearn.cluster import KMeans
 
 
 class Processor:
@@ -58,10 +59,16 @@ class Processor:
         self._impute_missing_values()
 
         #Outlier Treatment
-        outliers = self._boxplot_outlier_detection()
-        self.training.drop(outliers,axis = 0,inplace = True)
+        #outliers = self._boxplot_outlier_detection()
+        #self.training.drop(outliers,axis = 0,inplace = True)
 
-        #self.outlier_rank(False,0.5,self._z_score_outlier_detection(3),self._boxplot_outlier_detection())
+        self.outlier_rank(True,0.5,self._z_score_outlier_detection(3),self._boxplot_outlier_detection(ranking = True))
+
+
+        #self.mahalanobis_distance_outlier()
+        #print("===============================")
+        print(self.outlier_rank(False, 0.5, self._boxplot_outlier_detection(ranking = True), self._z_score_outlier_detection(3)))
+        #print("===============================")
 
         #self.mahalanobis_distance_outlier()
 
@@ -72,9 +79,6 @@ class Processor:
 
         #Normalization
         self._normalize()
-
-        #Balancing
-        #self.SMOTE_NC()
 
         print("Preprocessing complete!")
 
@@ -339,7 +343,7 @@ class Processor:
         MDs = pd.Series([distance for sublist in MDs for distance in sublist], index=ds.index)
 
         def find_outliers(MDs, percent = 0.03):
-            treshold = 1.5
+            treshold = 3
             std = np.std(MDs)
             k = treshold * std
             m = np.mean(MDs)
@@ -419,6 +423,8 @@ class Processor:
 
                     else:
                         novo_ds[var][novo_ds.index == key] = np.percentile(ds[var], 25) - 1.5 * iqr(ds[var])
+                else: novo_ds=novo_ds[novo_ds.index!=key]
+
         return novo_ds
 
     def outlier_rank(self,smoothing,treshold,*arg):
@@ -431,7 +437,8 @@ class Processor:
         keys = []
         for array in arg:
             if isinstance(array, dict):
-                keys.extend([key for key in array.keys()])
+                for key in array.keys():
+                    keys.extend([key for _ in range(len(array[key]))])
             else:
                 if (len(np.array(array).shape)) < 2:
                     ids.extend([id_ for id_ in array])
@@ -439,8 +446,11 @@ class Processor:
                     IDS.extend([id_ for sublist in array for id_ in sublist])
 
         full = IDS + keys + ids
-        ratios = [full.count(i)/len(arg) for i in full]
-
+        counts = np.array([full.count(i) for i in full]).reshape(-1,1)
+        scaler = MinMaxScaler()
+        scaler.fit(counts)
+        counts=scaler.transform(counts)
+        counts=[item for sublist in counts for item in sublist]
         pass_for_full = [thing for thing in arg]
 
         def get_full_outlier_dict(full_dict):
@@ -461,13 +471,14 @@ class Processor:
             return dd
 
         outlier_info_dict = get_full_outlier_dict(pass_for_full)
-        ratios=dict(sorted(dict(zip(full, ratios)).items(), key=lambda x: x[1], reverse=True))
-        outliers=list({key for (key, value) in ratios.items() if value > treshold})
+        counts=dict(sorted(dict(zip(full, counts)).items(), key=lambda x: x[1], reverse=True))
+        outliers=list({key for (key, value) in counts.items() if value > treshold})
 
         if smoothing:
             self.report.append('uni_iqr_rank_outlier_smoothing')
             outlier_info = dict([(k, v) for (k, v) in outlier_info_dict.items() if k in outliers])
             self.training=self.uni_iqr_outlier_smoothing(outlier_info,self.training)
+
         else:
             self.training=self.training[~self.training.index.isin(outliers)]
 
@@ -476,46 +487,6 @@ class Processor:
         outliers = list({key for (key, value) in outlier_rank_result[0].items() if value > treshold})
         outlier_info = dict([(k, v) for (k, v) in outlier_rank_result[1].items() if k in outliers])
         return outlier_info
-
-    #SAMPLING
-    def SMOTE_NC(self):
-        categories = self.training.dtypes
-        self.report.append('SMOTE_NC_sampling')
-        Y = self.training["Response"]
-        X = self.training.drop(columns=["Response"])
-        x_cols = X.columns
-        cat_cols = X[self.cat_vars].columns
-        sm = SMOTENC(random_state=self.seed, categorical_features=[cat_cols.get_loc(col) for col in cat_cols])
-        X_res, Y_res = sm.fit_resample(X.values, Y.values)
-        sampled_ds = pd.DataFrame(X_res,columns = x_cols)
-        sampled_ds['Response'] = Y_res
-        # sampled_ds.index=ds.index
-        self.training = sampled_ds
-
-
-    def SMOTE_sampling(self,ds):
-        self.report.append('SMOTE_sampling')
-        Y = ds["Response"]
-        X = ds.drop(columns=["Response"])
-        sm = SMOTE(random_state=self.seed)
-        X_res, Y_res = sm.fit_resample(X, Y)
-        sampled_ds = pd.DataFrame(X_res)
-        sampled_ds['Response'] = Y_res
-        # sampled_ds.index=ds.index
-        sampled_ds.columns = ds.columns
-        return round(sampled_ds, 2)
-
-    def Adasyn_sampling(self,ds):
-        self.report.append('Adasyn_sampling')
-        Y = ds["Response"]
-        X = ds.drop(columns=["Response"])
-        ada = ADASYN(random_state=self.seed)
-        X_res, Y_res = ada.fit_resample(X, Y)
-        sampled_ds = pd.DataFrame(X_res)
-        sampled_ds['Response'] = Y_res
-        # sampled_ds.index=ds.index
-        sampled_ds.columns = ds.columns
-        return round(sampled_ds, 2)
 
     def power_transformation(self):
         pt=PowerTransformer()
@@ -534,6 +505,18 @@ class Processor:
             temp[col]=self.unseen[col]
         self.unseen=temp
         print(temp)
+
+
+        def get_k_means_elbow_graph(ds, numerical, min_clust, max_clust):
+            km = pd.DataFrame(columns=['num_clusters', 'inertia'])
+            for i in range(min_clust, max_clust):
+                kmeans = KMeans(n_clusters=i).fit(self.training.select_dtypes(exclude='category'))
+                km = km.append({'num_clusters': i, 'inertia': kmeans.inertia_}, ignore_index=True)
+            sb.lineplot(x=km['num_clusters'], y=km['inertia'])
+            return
+
+
+
 
     ### NORMALIZATION
     def _normalize(self):

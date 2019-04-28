@@ -74,6 +74,7 @@ def decision_tree(training, param_grid, seed, cv=5):
     pipeline = Pipeline([("dt", DecisionTreeClassifier(random_state=seed))])
 
     clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
+    print(training.loc[:, training.columns != "Response"].values.shape, training["Response"].values.shape)
     clf_gscv.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
 
     return clf_gscv
