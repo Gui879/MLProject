@@ -161,11 +161,10 @@ def assess_generalization_auroc(estimator, unseen, print_graph):
 
     report = classification_report(unseen["Response"], predicted, output_dict=True)
 
-<<<<<<< HEAD
     print(unseen["Response"],predicted)
-=======
+
     #print(classification_report(unseen["Response"], predicted))
->>>>>>> af388e836f6ca1d5773599b857ec5428daa17259
+
 
     recall_ = recall_score(unseen["Response"], predicted)
     f1_score_ = f1_score(unseen["Response"], predicted)
