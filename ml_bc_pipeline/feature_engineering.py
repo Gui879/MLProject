@@ -19,7 +19,6 @@ from ga_feature_selection.feature_selection_ga import FeatureSelectionGA
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import KFold
 
-
 from prince import MFA
 
 

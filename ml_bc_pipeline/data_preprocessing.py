@@ -21,7 +21,8 @@ from collections import Counter
 from numpy.random import RandomState
 from imblearn.over_sampling import SMOTENC,SMOTE,ADASYN
 from sklearn.preprocessing import OneHotEncoder,PowerTransformer
-
+import seaborn as sb
+from sklearn.cluster import KMeans
 
 
 class Processor:
@@ -345,7 +346,7 @@ class Processor:
         MDs = pd.Series([distance for sublist in MDs for distance in sublist], index=ds.index)
 
         def find_outliers(MDs, percent = 0.03):
-            treshold = 1.5
+            treshold = 3
             std = np.std(MDs)
             k = treshold * std
             m = np.mean(MDs)
@@ -547,6 +548,18 @@ class Processor:
             temp[col]=self.unseen[col]
         self.unseen=temp
         print(temp)
+
+
+        def get_k_means_elbow_graph(ds, numerical, min_clust, max_clust):
+            km = pd.DataFrame(columns=['num_clusters', 'inertia'])
+            for i in range(min_clust, max_clust):
+                kmeans = KMeans(n_clusters=i).fit(self.training.select_dtypes(exclude='category'))
+                km = km.append({'num_clusters': i, 'inertia': kmeans.inertia_}, ignore_index=True)
+            sb.lineplot(x=km['num_clusters'], y=km['inertia'])
+            return
+
+
+
 
     ### NORMALIZATION
     def _normalize(self):
