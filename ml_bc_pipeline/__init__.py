@@ -86,7 +86,7 @@ def main():
 
         mlp_gscv = grid_search_MLP(fe.training, mlp_param_grid, seed)
         print("Best parameter set: ", mlp_gscv.best_params_)
-        #report(mlp_gscv.best_estimator_, fe.unseeen, mlp_gscv.best_params_, grid_search_MLP.__name__)
+        report(mlp_gscv.best_estimator_, fe.unseen, mlp_gscv.best_params_, grid_search_MLP.__name__)
 
         # =====================================
         # DECISION TREE
@@ -122,12 +122,12 @@ def main():
 
 
 
-        '''
 
+        '''
         # =====================================
         # GENETIC PROGRAMMING
         # =====================================
-       
+        
         The sum of p_crossover, p_subtree_mutation, '
         ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_point_mutation should total to 1.0 or less.
         gp_param_grid = {'gp__p_crossover':[0.3, 0.6,0.9],
@@ -138,9 +138,11 @@ def main():
 
         gp_gscv = gp_grid_search(fe.training, gp_param_grid, seed)
         print("Best parameter set: ", gp_gscv.best_params_)
-        
-        gp_est = gp(fe.training,seed)
-        report(gp_est,fe.unseen,model_name = 'gp')
+        '''
+
+        #gp_est = gp(fe.training,seed)
+        #report(gp_est,fe.unseen,model_name = 'gp')
+
 
 
         # =====================================
@@ -153,7 +155,7 @@ def main():
         #svc_gscv = svc(fe.training, svc_param_grid, seed)
         #print("Best parameter set: ", svc_gscv.best_params_)
         # report(logr_gscv.best_estimator_, fe.unseeen, logr_gscv.best_params_,logistic_regression.__name__)
-        '''
+
 
         # =====================================
         # X TREE CLASSIFIER
@@ -165,7 +167,6 @@ def main():
         xtclf = extraTreesClassifier(fe.training, xtclf_param_grid, seed)
         #report(xtclf.best_estimator_, fe.unseeen, xtclf.best_params_,xtclf.__name__)
 
-        '''
         # =====================================
         # XGBOOST
         # =====================================
@@ -211,9 +212,7 @@ def main():
 
 
 
-        ensemble_estimator = cluster_model(fe.training, fe.unseen, params, seed)
-        '''
-
+        #ensemble_estimator = cluster_model(fe.training, fe.unseen, params, seed)
 
         #Change partition
         if kfold_simple:
@@ -227,15 +226,17 @@ def main():
             train = DF_train.copy().iloc[train_index]
             test = DF_train.copy().iloc[test_index]
             print('split')
+            print("After Split:" ,train.shape,test.shape)
+
             pr = Processor(train, test, seed)
             pipeline['preprocessing'] = pr.report
             print('processor')
             # +++++++++++++++++ 4) feature engineering
 
             fe = FeatureEngineer(pr.training, pr.unseen,seed)
+            print("after fe:", fe.training.shape, fe.unseen.shape)
             pipeline['feature_engineering'] = fe.report
             print('feature_engineering')
-
 
             # =====================================
             # NEURAL NETWORK
@@ -272,11 +273,11 @@ def main():
             # =====================================
             # GENETIC PROGRAMMING
             # =====================================
-            '''
-            gp_gscv.best_estimator_ = gp_gscv.best_estimator_.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
-            report(gp_gscv.best_estimator_, fe.unseen, gp_gscv.best_params_, 'gp')
-            '''
-            gp_est = gp(fe.training,seed)
+
+            #gp_gscv.best_estimator_ = gp_gscv.best_estimator_.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
+            #report(gp_gscv.best_estimator_, fe.unseen, gp_gscv.best_params_, 'gp')
+
+            gp_est = gp(fe.training, seed)
             report(gp_est, fe.unseen, model_name = 'gp')
 
             # =====================================
@@ -296,6 +297,7 @@ def main():
 
             xtclf.best_estimator_ = xtclf.best_estimator_.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
             report(xtclf.best_estimator_, fe.unseen, xtclf.best_params_, 'xtree')
+
             # =====================================
             # XGBOOST
             # =====================================
@@ -330,7 +332,6 @@ def main():
 
             ensemble_estimator = ensemble(fe.training, classifiers)
             report(ensemble_estimator, fe.unseen, classifiers.keys(), model_name='ensemble')
-
 
         log.to_csv('Logs/' + 'version' + str(test_version)+'_'+str(seed)+'.csv')
         with open('Pipelines/version'+str(test_version)+'_'+str(seed)+'.txt', 'w') as file:

@@ -1,1 +1,5 @@
+<<<<<<< HEAD
 {"preprocessing": ["_impute_missing_values", "_z_score_outlier_detection", "_boxplot_outlier_detection", "outlier_rank", "uni_iqr_rank_outlier_smoothing", "uni_iqr_outlier_smoothing", "_normalize"], "feature_engineering": ["_extract_business_features", "recursive_feature_elimination", "anova_F_selection", "SMOTE_NC_sampling"]}
+=======
+{"preprocessing": ["_impute_missing_values", "_z_score_outlier_detection", "_boxplot_outlier_detection", "outlier_rank", "uni_iqr_rank_outlier_smoothing", "uni_iqr_outlier_smoothing", "_normalize"], "feature_engineering": ["_extract_business_features", "recursive_feature_elimination", "anova_F_selection", "recursive_feature_elimination", "anova_F_selection", "SMOTE_NC_sampling"]}
+>>>>>>> c683c6ccd53be3ac6704ae4a45064cf518b89ff0

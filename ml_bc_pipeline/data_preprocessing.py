@@ -54,7 +54,7 @@ class Processor:
                          'MntSweetProducts', 'MntGoldProds', 'NumDealsPurchases', 'NumWebPurchases',
                          'NumCatalogPurchases', 'NumStorePurchases',
                          'NumWebVisitsMonth', 'Response']
-
+        print("Before input:",self.training.shape,self.unseen.shape)
         #Deal with missing values
 
         self._impute_missing_values()
@@ -65,10 +65,8 @@ class Processor:
         #self.training.drop(outliers,axis = 0,inplace = True)
 
 
-        #self.uni_iqr_outlier_smoothing()
-
-
         self.outlier_rank(True,0.5,self._z_score_outlier_detection(3),self._boxplot_outlier_detection(ranking = True), self.isolation_forest(0.03,seed), self.mahalanobis_distance_outlier())
+
 
         #print('after_outlier', self.training.shape)
         #print('after_outlier', self.unseen.shape)
@@ -535,9 +533,12 @@ class Processor:
 
     ### NORMALIZATION
     def _normalize(self):
+        print(self.training.shape,self.unseen.shape)
         self.report.append('_normalize')
         dummies = list(self.training.select_dtypes(include=["category", "object"]).columns)
         dummies.append('Response')
+        print(self.training.columns[~self.training.columns.isin(dummies)])
+        print(self.unseen.columns[~self.unseen.columns.isin(dummies)])
         scaler = MinMaxScaler()
         print('normalize', self.training.shape)
         scaler.fit(self.training[self.training.columns[~self.training.columns.isin(dummies)]].values)
