@@ -40,14 +40,21 @@ class FeatureEngineer:
         #self.training = pd.concat([self.training, components], axis=1)
         #self.correlation_based_feature_selection(self.correlation_feature_ordering)
         #self.rank_features_chi_square()
-
+        self.feature_selection_rank(0.3, self.ga_feature_selection(LogisticRegression(solver='lbfgs')),
+                                    self.recursive_feature_elimination('Response', 10),
+                                    self.anova_F_selection('Response', 10))
         #self.feature_selection_rank(0.5,self.anova_F_selection('Response',20),self.extra_Trees_Classifier(20))
         #print("Feature Engeneering Completed!")
         #self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
         #self.correlation_based_feature_selection(self.correlation_feature_ordering)
-        self.multi_factor_analysis(20,100)
-        self.SMOTE_NC()
 
+        #self.box_cox_transformations()
+        #This Works
+        self.feature_selection_rank(0.3,self.ga_feature_selection(LogisticRegression(solver = 'lbfgs')), self.recursive_feature_elimination('Response',10), self.anova_F_selection('Response',10))
+        self.multi_factor_analysis(20, 100)
+        #self.box_cox_transformations()
+        #This Works
+        self.SMOTE_NC()
         #self.rank_features_chi_square(self.training.select_dtypes(exclude='category').columns ,self.training.select_dtypes(include='category').columns)
 
 
@@ -180,8 +187,10 @@ class FeatureEngineer:
         self.training.drop(labels=const, axis=1, inplace=True)
         self.unseen.drop(labels=const, axis=1, inplace=True)
 
-    def box_cox_transformations(self, num_features, target):
+    def box_cox_transformations(self):
         self.report.append('box_cox_transformations')
+        num_features = self.training.copy().loc[:, self.training.dtypes != 'category'].drop('Response', axis=1).columns
+        target = 'Response'
         # 1) perform feature scaling, using MinMaxScaler from sklearn
         bx_cx_scaler = MinMaxScaler(feature_range=(0, 1), copy=False)
         X_tr_01 = bx_cx_scaler.fit_transform(self.training[num_features].values)
@@ -222,6 +231,7 @@ class FeatureEngineer:
             self.training[feature] = best_power_trans
             # 3) 3) apply the best Box-Cox transformation, determined on training data, on unseen data
             self.unseen[feature] = np.round(self._bx_cx_trans_dict[best_trans_label](self.unseen[feature]), 4)
+        print(self.training.columns)
         self.box_cox_features = num_features_BxCx
 
     def multi_factor_analysis(self, n_components, n_iterations):
@@ -419,9 +429,12 @@ class FeatureEngineer:
         ratios = [VARS.count(i) / len(arg) for i in VARS]
         ratios = dict(sorted(dict(zip(VARS, ratios)).items(), key=lambda x: x[1], reverse=True))
         kept_vars = list({k for (k, v) in ratios.items() if v > treshold})
-        self.training = self.training[kept_vars]
-        self.unseen = self.unseen[kept_vars]
-        print(self.training.head())
+        temp = self.training[kept_vars]
+        temp_un = self.unseen[kept_vars]
+        temp['Response'] = self.training['Response']
+        temp_un['Response'] = self.unseen['Response']
+        self.training = temp
+        self.unseen = temp_un
 
     def correlation_feature_ordering(self):
         self.report.append('Correlation_Feature_ordering')
@@ -465,9 +478,13 @@ class FeatureEngineer:
         feature_selection = FeatureSelectionGA(model,
                                                self.training.loc[:, self.training.columns != "Response"].values,
                                                self.training["Response"].values)
-        feature_selection.generate(n_pop=100, ngen=5)
+        feature_selection.generate(n_pop=50, ngen=4)
+        print(self.training.columns)
+        print(self.training.columns[np.where(np.array(feature_selection.best_ind)==1)])
+        #Print above works, make return of dic with coolumns
+        return self.training.columns[np.where(np.array(feature_selection.best_ind)==1)]
 
-        return self.training.loc[:, self.training.columns != "Response"].columns[np.where(np.array(feature_selection.best_ind)==1)]
+
 
     #SAMPLING
 
