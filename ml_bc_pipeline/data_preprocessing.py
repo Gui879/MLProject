@@ -56,14 +56,20 @@ class Processor:
                          'NumWebVisitsMonth', 'Response']
         print("Before input:",self.training.shape,self.unseen.shape)
         #Deal with missing values
+
         self._impute_missing_values()
-        print("Before outlier:", self.training.shape, self.unseen.shape)
+
+
         #Outlier Treatment
         #outliers = self._boxplot_outlier_detection()
         #self.training.drop(outliers,axis = 0,inplace = True)
 
-        self.outlier_rank(True,0.5,self._z_score_outlier_detection(3),self._boxplot_outlier_detection(ranking = True))
 
+        self.outlier_rank(True,0.5,self._z_score_outlier_detection(3),self._boxplot_outlier_detection(ranking = True), self.isolation_forest(0.03,seed), self.mahalanobis_distance_outlier())
+
+
+        #print('after_outlier', self.training.shape)
+        #print('after_outlier', self.unseen.shape)
 
         #self.mahalanobis_distance_outlier()
         #print("===============================")
@@ -415,8 +421,11 @@ class Processor:
         '''use the info gatheres from the previous function (decide on and get outliers) and smoothes the detected outliers.'''
         self.report.append('uni_iqr_outlier_smoothing')
         novo_ds = ds.copy()
+        print(DOAGO_results)
         for key in DOAGO_results.keys():
+            print(key)
             for var in DOAGO_results[key]:
+                print(var)
                 if var != 'multi/unknown':
                     if ds[var][ds.index == key].values > np.mean(ds[var]):
                         novo_ds[var][novo_ds.index == key] = np.percentile(ds[var], 75) + 1.5 * iqr(ds[var])
@@ -455,14 +464,17 @@ class Processor:
 
         def get_full_outlier_dict(full_dict):
             dd = defaultdict(list)
+            [print(arg_) for arg_ in full_dict]
             for d in ([arg_ for arg_ in full_dict]):
                 if isinstance(d,dict):
                     for key, value in d.items():
                         dd[key].append(value)
+
                 else:
                     for id in d:
-                        dd[id]='multi/unknown'
+                        dd[id]=[['multi/unknown']]
             dd = dict(dd)
+
             for key in dd.keys():
                 # flattning the values of the dicts
                 dd[key] = [item for sublist in dd[key] for item in sublist]
@@ -477,6 +489,7 @@ class Processor:
         if smoothing:
             self.report.append('uni_iqr_rank_outlier_smoothing')
             outlier_info = dict([(k, v) for (k, v) in outlier_info_dict.items() if k in outliers])
+            print(outlier_info)
             self.training=self.uni_iqr_outlier_smoothing(outlier_info,self.training)
 
         else:
@@ -527,11 +540,13 @@ class Processor:
         print(self.training.columns[~self.training.columns.isin(dummies)])
         print(self.unseen.columns[~self.unseen.columns.isin(dummies)])
         scaler = MinMaxScaler()
+        print('normalize', self.training.shape)
         scaler.fit(self.training[self.training.columns[~self.training.columns.isin(dummies)]].values)
         self.training[self.training.columns[~self.training.columns.isin(dummies)]] = pd.DataFrame(
             scaler.transform(self.training[self.training.columns[~self.training.columns.isin(dummies)]].values),
             columns=self.training[self.training.columns[~self.training.columns.isin(dummies)]].columns,
             index=self.training[self.training.columns[~self.training.columns.isin(dummies)]].index)
+        print('normalize',self.unseen.shape)
         self.unseen[self.unseen.columns[~self.unseen.columns.isin(dummies)]] = pd.DataFrame(
             scaler.transform(self.unseen[self.unseen.columns[~self.unseen.columns.isin(dummies)]].values),
             columns=self.unseen[self.unseen.columns[~self.unseen.columns.isin(dummies)]].columns,

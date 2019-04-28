@@ -32,22 +32,35 @@ class FeatureEngineer:
         self.unseen = unseen
         self.seed = seed
         self._extract_business_features()
-
+        if self.training.isnull().values.any() or self.unseen.isnull().values.any():
+            raise ValueError('business features')
         #self.linear_regression_selection('Response',10)
         #self.lda_extraction()
         #self.linear_regression_selection('Response',10)
         #components = self.multi_factor_analysis(self.training.shape[1],10)
         #self.training = pd.concat([self.training, components], axis=1)
-        #self.correlation_based_feature_selection(self.correlation_feature_ordering)
+        #self.box_cox_transformations()
+        if self.training.isnull().values.any() or self.unseen.isnull().values.any():
+            raise ValueError('box_cox')
+        self.correlation_based_feature_selection(self.correlation_feature_ordering)
         #self.rank_features_chi_square()
+
+        self.feature_selection_rank(0.3, self.rank_features_chi_square(15),
+                                    self.recursive_feature_elimination('Response', 15),
+                                    self.all_inf_gain('Response', 15),
+                                    self.extra_Trees_Classifier(15))
+        if self.training.isnull().values.any() or self.unseen.isnull().values.any():
+            raise ValueError('feature_selection')
+
         #self.feature_selection_rank(0.5,self.anova_F_selection('Response',20),self.extra_Trees_Classifier(20))
         #print("Feature Engeneering Completed!")
         #self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
         #self.correlation_based_feature_selection(self.correlation_feature_ordering)
 
+
         #self.box_cox_transformations()
         #This Works
-        self.feature_selection_rank(0.3,self.ga_feature_selection(LogisticRegression(solver = 'lbfgs')), self.recursive_feature_elimination('Response',10), self.anova_F_selection('Response',10))
+        self.feature_selection_rank(0.3,self.rank_features_chi_square(15), self.recursive_feature_elimination('Response',15),self.all_inf_gain('Response',15), self.extra_Trees_Classifier(15))
         #self.multi_factor_analysis(20, 100)
         #self.box_cox_transformations()
         #This Works
@@ -260,7 +273,7 @@ class FeatureEngineer:
 
     ########FEATURE SELECTION################################
 
-    def rank_features_chi_square(self):
+    def rank_features_chi_square(self, n):
         self.report.append('rank_features_chi_square')
         chisq_dict = {}
         continuous_flist = self.training.drop('Response',axis = 1).loc[:,self.training.dtypes != 'category'].columns
@@ -281,6 +294,7 @@ class FeatureEngineer:
         df_chisq_rank.sort_values("Chi-Squared", ascending=False, inplace=True)
         df_chisq_rank["valid"] = df_chisq_rank["p-value"] <= 0.05
         self._rank["chisq"] = df_chisq_rank
+        return df_chisq_rank.head(n).index.values
 
     def print_top(self, n):
         print(self._rank.index[0:n])
@@ -323,8 +337,8 @@ class FeatureEngineer:
         results.sort_values(ascending=False, inplace=True)
         return np.array(results.head(n).index)
 
-    def entropy(self):
-        ds = self.training
+    def entropy(self,ds):
+
         if len(ds.unique()) > 1:
             p_c1 = ds.mean()
             p_c0 = 1 - p_c1
@@ -334,7 +348,7 @@ class FeatureEngineer:
 
     def all_inf_gain(self, vd, n):
         self.report.append('all_inf_gain')
-        ds = self.training
+        ds = self.training.loc[:, self.training.dtypes != 'category']
         vars_inf_gain = []
         best_dict = {}
         for var in ds:
@@ -360,7 +374,7 @@ class FeatureEngineer:
 
         best_dict = dict(sorted(best_dict.items(), key=lambda kv: kv[1], reverse=True))
         ks = [k.split('_')[0] for k in best_dict.keys()]
-        return np.array(pd.DataFrame(best_dict, index=[0]).T.head(n).index), ks[:n]
+        return [k for k in best_dict.keys()]
 
     def ind_inf_gain(self, var, vd):
         self.report.append('ind_inf_gain')
@@ -417,8 +431,13 @@ class FeatureEngineer:
         print(self.training.head())
         VARS = []
         for array in arg:
-            VARS.append(array)
+            if array is not None:
+                print('type', type(array))
+                VARS.append(array)
+        print(VARS)
         VARS = [id_ for sublist in VARS for id_ in sublist]
+        #[for v in value for value in VARS if type(value) == 'list']
+        print(VARS)
         ratios = [VARS.count(i) / len(arg) for i in VARS]
         ratios = dict(sorted(dict(zip(VARS, ratios)).items(), key=lambda x: x[1], reverse=True))
         kept_vars = list({k for (k, v) in ratios.items() if v > treshold})

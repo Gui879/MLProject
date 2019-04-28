@@ -101,6 +101,33 @@ def logistic_regression(training, param_grid, seed, cv=5):
 
     return clf_gscv
 
+def bo_logistic_regression(training, param_grid, seed, cv= 5):
+
+    n_param_grid = {}
+    for key, value in param_grid.items():
+        key = key.replace("lr" + '__', '')
+        if type(value) == type(tuple([0,0])):
+            n_param_grid[key] = value
+        else:
+            n_param_grid[key] = (0, len(value)-1)
+
+    def ob_function(penalty, C, solver):
+        skf = StratifiedKFold(n_splits=cv, shuffle=True)
+        for train_index, test_index in skf.split(training.loc[:, (training.columns != "Response")].values,training["Response"].values):
+            train = training.iloc[train_index]
+            test = training.iloc[test_index]
+            penalty = param_grid['penalty'][0]
+            solver =  param_grid['penalty'][int(round(solver,0))]
+            model  = LogisticRegression(random_state=seed,penalty = penalty,solver = solver,C = C )
+            model.fit(train.loc[:, (train.columns != "Response")].values, train["Response"].values)
+            y_pred = model.predict(test.drop('Response',axis = 1))
+            return profit(test['Response'],y_pred)
+
+
+    b_optimizer = BayesianOptimization(f=ob_function, pbounds=n_param_grid, random_state=1)
+    b_optimizer.maximize(n_iter = 300, init_points = 100)
+    return b_optimizer
+
 def gp_grid_search(training, param_grid, seed, cv = 5):
     pipeline = Pipeline([("gp",SymbolicClassifier(generations = 20, random_state = seed))])
 
