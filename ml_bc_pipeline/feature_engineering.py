@@ -40,15 +40,17 @@ class FeatureEngineer:
         #self.training = pd.concat([self.training, components], axis=1)
         #self.correlation_based_feature_selection(self.correlation_feature_ordering)
         #self.rank_features_chi_square()
-
+        self.feature_selection_rank(0.3, self.ga_feature_selection(LogisticRegression(solver='lbfgs')),
+                                    self.recursive_feature_elimination('Response', 10),
+                                    self.anova_F_selection('Response', 10))
         #self.feature_selection_rank(0.5,self.anova_F_selection('Response',20),self.extra_Trees_Classifier(20))
         #print("Feature Engeneering Completed!")
         #self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
         #self.correlation_based_feature_selection(self.correlation_feature_ordering)
-        #self.multi_factor_analysis(20,100)
+        self.multi_factor_analysis(20,100)
         #self.box_cox_transformations()
         #This Works
-        #self.feature_selection_rank(0.3,self.ga_feature_selection(LogisticRegression(solver = 'lbfgs')), self.recursive_feature_elimination('Response',10), self.anova_F_selection('Response',10))
+
         self.SMOTE_NC()
         #self.rank_features_chi_square(self.training.select_dtypes(exclude='category').columns ,self.training.select_dtypes(include='category').columns)
 
@@ -425,7 +427,6 @@ class FeatureEngineer:
         temp_un['Response'] = self.unseen['Response']
         self.training = temp
         self.unseen = temp_un
-        print(self.training.columns)
 
     def correlation_feature_ordering(self):
         self.report.append('Correlation_Feature_ordering')
@@ -473,8 +474,9 @@ class FeatureEngineer:
         print(self.training.columns)
         print(self.training.columns[np.where(np.array(feature_selection.best_ind)==1)])
         #Print above works, make return of dic with coolumns
-        self.training = self.training.loc[:, self.training.columns != "Response"].columns[np.where(np.array(feature_selection.best_ind)==1)]
-        self.unseen = self.unseen.loc[:, self.training.columns != "Response"].columns[np.where(np.array(feature_selection.best_ind) == 1)]
+        return self.training.columns[np.where(np.array(feature_selection.best_ind)==1)]
+
+
 
     #SAMPLING
 

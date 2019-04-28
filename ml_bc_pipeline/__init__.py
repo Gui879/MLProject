@@ -122,14 +122,14 @@ def main():
 
 
 
-
+        '''
 
         # =====================================
         # GENETIC PROGRAMMING
         # =====================================
-        '''
+       
         The sum of p_crossover, p_subtree_mutation, '
-ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_point_mutation should total to 1.0 or less.
+        ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_point_mutation should total to 1.0 or less.
         gp_param_grid = {'gp__p_crossover':[0.3, 0.6,0.9],
                          'gp__p_subtree_mutation':[0.01,0.10],
                          'gp__p_point_replace': [0.01, 0.05, 0.10],
@@ -138,7 +138,7 @@ ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_p
 
         gp_gscv = gp_grid_search(fe.training, gp_param_grid, seed)
         print("Best parameter set: ", gp_gscv.best_params_)
-        '''
+        
         gp_est = gp(fe.training,seed)
         report(gp_est,fe.unseen,model_name = 'gp')
 
@@ -153,6 +153,8 @@ ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_p
         #svc_gscv = svc(fe.training, svc_param_grid, seed)
         #print("Best parameter set: ", svc_gscv.best_params_)
         # report(logr_gscv.best_estimator_, fe.unseeen, logr_gscv.best_params_,logistic_regression.__name__)
+        '''
+
         # =====================================
         # X TREE CLASSIFIER
         # =====================================
@@ -163,6 +165,7 @@ ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_p
         xtclf = extraTreesClassifier(fe.training, xtclf_param_grid, seed)
         #report(xtclf.best_estimator_, fe.unseeen, xtclf.best_params_,xtclf.__name__)
 
+        '''
         # =====================================
         # XGBOOST
         # =====================================
@@ -197,9 +200,9 @@ ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_p
 
         ensemble_estimator = ensemble(fe.training, classifiers)
         report(ensemble_estimator, fe.unseen, classifiers.keys(), ensemble.__name__)
-        
+        '''
 
-
+        '''  
         params = {'mlp':{'model':grid_search_MLP, 'params': mlp_param_grid},
                   'dt':{'model':decision_tree, 'params': dt_param_grid},
                   'nb':{'model':naive_bayes, 'params': nb_param_grid}}
@@ -209,8 +212,8 @@ ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_p
 
 
         ensemble_estimator = cluster_model(fe.training, fe.unseen, params, seed)
-
         '''
+
 
         #Change partition
         if kfold_simple:
@@ -233,13 +236,7 @@ ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_p
             pipeline['feature_engineering'] = fe.report
             print('feature_engineering')
 
-<<<<<<< HEAD
 
-
-
-
-=======
->>>>>>> 3cda21366f6e738171668e7b26018a9753e3b006
             # =====================================
             # NEURAL NETWORK
             # =====================================
@@ -279,7 +276,7 @@ ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_p
             gp_gscv.best_estimator_ = gp_gscv.best_estimator_.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
             report(gp_gscv.best_estimator_, fe.unseen, gp_gscv.best_params_, 'gp')
             '''
-            gp_est = gp.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
+            gp_est = gp(fe.training,seed)
             report(gp_est, fe.unseen, model_name = 'gp')
 
             # =====================================
@@ -303,28 +300,35 @@ ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_p
             # XGBOOST
             # =====================================
 
-            xgb = xgb.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
+            xgb = xgboost(fe.training, seed)
             report(xgb, fe.unseen, model_name=xgboost.__name__)
 
             # =====================================
             # ADABOOST
             # =====================================
 
-            adaboost_ = adaboost_.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
+            adaboost_ = adaboost(fe.training, seed)
             report(adaboost_, fe.unseen, model_name='adaboost')
 
             # =====================================
             # GRADIENTBOOSTING
             # =====================================
 
-            gradientboost_ = gradientboost_.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
+            gradientboost_ = gradientBoosting(fe.training,seed)
             report(gradientboost_, fe.unseen, model_name='gradientboost')
 
             # =====================================
             # ENSEMBLE
             # =====================================
 
-            ensemble_estimator = ensemble_estimator.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
+            classifiers = {
+                'neural_net': mlp_gscv.best_estimator_,
+                'dt': dt_gscv.best_estimator_,
+                'nb': nb_gscv.best_estimator_,
+                'logr': logr_gscv.best_estimator_,
+            }
+
+            ensemble_estimator = ensemble(fe.training, classifiers)
             report(ensemble_estimator, fe.unseen, classifiers.keys(), model_name='ensemble')
 
 
