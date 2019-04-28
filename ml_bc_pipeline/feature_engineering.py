@@ -13,10 +13,16 @@ from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.feature_selection import RFE, SelectKBest, f_classif
 from sklearn.linear_model import LogisticRegression
 import statsmodels.api as sm
+from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import KBinsDiscretizer, MinMaxScaler,PowerTransformer
 from imblearn.over_sampling import SMOTENC,SMOTE,ADASYN
 from ga_feature_selection.feature_selection_ga import FeatureSelectionGA
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import KFold
+
+
 from prince import MFA
+
 
 class FeatureEngineer:
 
@@ -27,7 +33,6 @@ class FeatureEngineer:
         self.unseen = unseen
         self.seed = seed
         self._extract_business_features()
-
 
         #self.linear_regression_selection('Response',10)
         #self.lda_extraction()
@@ -43,6 +48,8 @@ class FeatureEngineer:
         self.correlation_based_feature_selection(self.correlation_feature_ordering)
         self.pca_extraction()
         self.SMOTE_NC()
+
+        #self.rank_features_chi_square(self.training.select_dtypes(exclude='category').columns ,self.training.select_dtypes(include='category').columns)
 
 
         print("Feature Engeneering Completed!")
@@ -265,7 +272,7 @@ class FeatureEngineer:
 
     def get_top(self, criteria="chisq", n_top=10):
         input_features = list(self._rank[criteria].index[0:n_top])
-        input_features.append("DepVar")
+        input_features.append("Response")
         return self.training[input_features], self.unseen[input_features]
 
     def linear_regression_selection(self, vd, n):
@@ -402,7 +409,6 @@ class FeatureEngineer:
         kept_vars = list({k for (k, v) in ratios.items() if v > treshold})
         self.training = self.training[kept_vars]
         self.unseen = self.unseen[kept_vars]
-        print('after\n')
         print(self.training.head())
 
     def correlation_feature_ordering(self):
@@ -504,4 +510,56 @@ class FeatureEngineer:
         unseen = pd.DataFrame(scaler.transform(unseen.values), columns=unseen.columns, index=unseen.index)
         return training, unseen
 
+    def decision_tree_forward(self, n_selected_features):
+        """
+        This function implements the forward feature selection algorithm based on decision tree
+
+        Input
+        -----
+        X: {numpy array}, shape (n_samples, n_features)
+            input data
+        y: {numpy array}, shape (n_samples, )
+            input class labels
+        n_selected_features: {int}
+            number of selected features
+
+        Output
+        ------
+        F: {numpy array}, shape (n_features,)
+            index of selected features
+        """
+
+        x_train = self.training.loc[:, self.training.columns!='Response'].values
+        y = self.training['Response'].values
+        n_samples, n_features = x_train.shape
+        # using 10 fold cross validation
+        cv = KFold(n_splits=10, shuffle=True)
+        # choose decision tree as the classifier
+        clf = DecisionTreeClassifier()
+
+        # selected feature set, initialized to be empty
+        F = []
+        count = 0
+        while count < n_selected_features:
+            max_acc = 0
+            for i in range(n_features):
+                if i not in F:
+                    F.append(i)
+                    X_tmp = x_train[:, F]
+                    acc = 0
+                    for train, test in cv.split(x_train,y):
+                        clf.fit(X_tmp[train], y[train])
+                        y_predict = clf.predict(X_tmp[test])
+                        acc_tmp = accuracy_score(y[test], y_predict)
+                        acc += acc_tmp
+                    acc = float(acc) / 10
+                    F.pop()
+                    # record the feature which results in the largest accuracy
+                    if acc > max_acc:
+                        max_acc = acc
+                        idx = i
+            # add the feature which results in the largest accuracy
+            F.append(idx)
+            count += 1
+        return self.training.loc[:, self.training.columns!='Response'].columns[np.array(F)].values
 
