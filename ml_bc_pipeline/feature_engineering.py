@@ -48,10 +48,10 @@ class FeatureEngineer:
         #self.box_cox_transformations()
         #This Works
         self.feature_selection_rank(0.3,self.ga_feature_selection(LogisticRegression(solver = 'lbfgs')), self.recursive_feature_elimination('Response',10), self.anova_F_selection('Response',10))
-        self.multi_factor_analysis(20, 100)
+        #self.multi_factor_analysis(20, 100)
         #self.box_cox_transformations()
         #This Works
-        self.SMOTE_NC()
+        self.Adasyn_sampling()
         #self.rank_features_chi_square(self.training.select_dtypes(exclude='category').columns ,self.training.select_dtypes(include='category').columns)
 
 
@@ -125,6 +125,7 @@ class FeatureEngineer:
         lda_coef = lda.coef_
         lda_means = lda.means_
         exp_var = lda.explained_variance_ratio_
+        print(lda_ds)
         return lda_ds, exp_var
 
     def factor_analysis_extraction(self):
@@ -476,8 +477,6 @@ class FeatureEngineer:
         #Print above works, make return of dic with coolumns
         return self.training.columns[np.where(np.array(feature_selection.best_ind)==1)]
 
-
-
     #SAMPLING
 
     def SMOTE_NC(self):
@@ -509,7 +508,8 @@ class FeatureEngineer:
         sampled_ds.columns = ds.columns
         return round(sampled_ds, 2)
 
-    def Adasyn_sampling(self, ds):
+    def Adasyn_sampling(self):
+        ds = self.training.copy()
         self.report.append('Adasyn_sampling')
         Y = ds["Response"]
         X = ds.drop(columns=["Response"])
@@ -519,7 +519,7 @@ class FeatureEngineer:
         sampled_ds['Response'] = Y_res
         # sampled_ds.index=ds.index
         sampled_ds.columns = ds.columns
-        return round(sampled_ds, 2)
+        self.training = round(sampled_ds, 2)
     
     def _normalize(self,training,unseen):
         dummies = list(training.select_dtypes(include=["category", "object"]).columns)
