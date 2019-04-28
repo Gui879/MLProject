@@ -88,8 +88,8 @@ def main():
         logr_gscv = logistic_regression(fe.training, logr_param_grid, seed)
 
         #XGBOOST
-        xg_param_grid = {'xg__learning_rate':[0.1,0.3,0.5,1],
-                         'xg__max_depth':[3,4,5],
+        xg_param_grid = {'xg__learning_rate':[0.1,0.5,1],
+                         'xg__max_depth':[3,5],
                          'xg__n_estimators':[100,200]}
 
         xgb = xgboost(fe.training, xg_param_grid, seed)
@@ -103,7 +103,7 @@ def main():
 
         #GRADIENT BOOST
 
-        gr_param_grid = {'gr__learning_rate': [0.1,0.3,0.5,1],
+        gr_param_grid = {'gr__learning_rate': [0.1,0.5,1],
                          'gr__n_estimators': [500, 1000]}
 
         gr_gscv = gradientBoosting(fe.training, gr_param_grid, seed)
