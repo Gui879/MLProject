@@ -77,6 +77,16 @@ def main():
 
         #####INSERT MODELS TO BE EVALUATED - OPTIMIZE PARAMETERS
 
+        # =====================================
+        # NEURAL NETWORK
+        # =====================================
+
+        mlp_param_grid = {'mlpc__hidden_layer_sizes': [(3), (6), (3, 3), (5, 5)],
+                          'mlpc__learning_rate_init': [0.001, 0.01]}
+
+        mlp_gscv = grid_search_MLP(fe.training, mlp_param_grid, seed)
+        print("Best parameter set: ", mlp_gscv.best_params_)
+        report(mlp_gscv.best_estimator_, fe.unseen, mlp_gscv.best_params_, grid_search_MLP.__name__)
 
         #LOGISTIC REGRESSSION WITH BAYESIAN OPTIMIZATION
 
@@ -100,13 +110,6 @@ def main():
                          'gp__population_size':[1000]}
 
         gp_gscv = gp(fe.training, gp_param_grid, seed)
-
-        #GRADIENT BOOST
-
-        gr_param_grid = {'gr__learning_rate': [0.1,0.5,1],
-                         'gr__n_estimators': [500, 1000]}
-
-        gr_gscv = gradientBoosting(fe.training, gr_param_grid, seed)
 
 
         # Change partition
@@ -133,6 +136,14 @@ def main():
 
 
             ##### TRAIN MODELS
+            # =====================================
+            # NEURAL NETWORK
+            # =====================================
+
+            mlp_gscv.best_estimator_ = mlp_gscv.best_estimator_.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
+            #print("Best parameter set: ", mlp_gscv.best_params_)
+            report(mlp_gscv.best_estimator_, fe.unseen, mlp_gscv.best_params_, grid_search_MLP.__name__)
+
 
             # =====================================
             # LOGISTIC REGRESSION
@@ -149,25 +160,22 @@ def main():
             xgb.best_estimator_ = xgb.best_estimator_.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
             report(xgb.best_estimator_, fe.unseen, xgb.best_params_,'xgb')
             print("Best parameter set: ", xgb.best_estimator_)
+
             # =====================================
             # GENETIC PROGRAMMING
             # =====================================
+
             gp_gscv.best_estimator_ = gp_gscv.best_estimator_.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
             report(gp_gscv.best_estimator_, fe.unseen, gp_gscv.best_params_,'gp')
             print("Best parameter set: ", gp_gscv.best_params_)
-            # =====================================
-            # GRADIENT BOOST
-            # =====================================
 
-            gr_gscv.best_estimator_ = gr_gscv.best_estimator_.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
-            report(gr_gscv.best_estimator_, fe.unseen, gr_gscv.best_params_,'gr')
-            print("Best parameter set: ", gr_gscv.best_params_)
             # =====================================
             # ENSEMBLE
             # =====================================
+
             classifiers = {
                 'xg': xgb.best_estimator_,
-                'gr': gr_gscv.best_estimator_,
+                'mlp': mlp_gscv.best_estimator_,
                 'gp': gp_gscv.best_estimator_,
                 'lr': logr_gscv.best_estimator_,
             }
