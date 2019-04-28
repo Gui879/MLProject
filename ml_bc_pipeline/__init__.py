@@ -5,7 +5,8 @@ from sklearn.model_selection import train_test_split, StratifiedKFold, KFold
 from ml_bc_pipeline.data_loader import Dataset
 from ml_bc_pipeline.data_preprocessing import Processor
 from ml_bc_pipeline.feature_engineering import FeatureEngineer
-from ml_bc_pipeline.model import gradientBoosting,grid_search_MLP, assess_generalization_auroc, decision_tree, naive_bayes, logistic_regression, xgboost, ensemble, adaboost, extraTreesClassifier,gp_grid_search,gp
+from ml_bc_pipeline.model import gradientBoosting,grid_search_MLP, assess_generalization_auroc, decision_tree, naive_bayes, logistic_regression, xgboost, ensemble, adaboost, extraTreesClassifier,gp_grid_search,gp,svc, cluster_model
+
 from datetime import datetime
 from os import listdir
 import json
@@ -75,6 +76,7 @@ def main():
         fe = FeatureEngineer(pr.training, pr.unseen, seed)
         pipeline['feature_engineering'] = fe.report
 
+
         # =====================================
         # NEURAL NETWORK
         # =====================================
@@ -118,6 +120,7 @@ def main():
         print("Best parameter set: ", logr_gscv.best_params_)
         #report(logr_gscv.best_estimator_, fe.unseeen, logr_gscv.best_params_,logistic_regression.__name__)
 
+
         # =====================================
         # GENETIC PROGRAMMING
         # =====================================
@@ -135,6 +138,17 @@ ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_p
         '''
         gp_est = gp(fe.training,seed)
         report(gp_est,fe.unseen,model_name = 'gp')
+
+        # =====================================
+        # SVC (SUPPORT VECTOR MACHINE)
+        # =====================================
+
+        #svc_param_grid = {'svc__C': [0.5],
+        #                 'svc__kernel': ['linear'],
+        #                 'svc__gamma': [0.1]}
+        #svc_gscv = svc(fe.training, svc_param_grid, seed)
+        #print("Best parameter set: ", svc_gscv.best_params_)
+        # report(logr_gscv.best_estimator_, fe.unseeen, logr_gscv.best_params_,logistic_regression.__name__)
         # =====================================
         # X TREE CLASSIFIER
         # =====================================
@@ -179,6 +193,18 @@ ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_p
 
         ensemble_estimator = ensemble(fe.training, classifiers)
         report(ensemble_estimator, fe.unseen, classifiers.keys(), ensemble.__name__)
+        
+
+
+        params = {'mlp':{'model':grid_search_MLP, 'params': mlp_param_grid},
+                  'dt':{'model':decision_tree, 'params': dt_param_grid},
+                  'nb':{'model':naive_bayes, 'params': nb_param_grid}}
+
+
+
+
+
+        ensemble_estimator = cluster_model(fe.training, fe.unseen, params, seed)
 
         #Change partition
         if kfold_simple:
@@ -200,6 +226,7 @@ ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_p
             fe = FeatureEngineer(pr.training, pr.unseen,seed)
             pipeline['feature_engineering'] = fe.report
             print('feature_engineering')
+
             # =====================================
             # NEURAL NETWORK
             # =====================================
@@ -241,6 +268,16 @@ ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_p
             '''
             gp_est = gp.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
             report(gp_est, fe.unseen, model_name = 'gp')
+
+            # =====================================
+            # SVC (SUPPORT VECTOR MACHINE)
+            # =====================================
+
+            #svc_gscv.best_estimator_ = svc_gscv.best_estimator_.fit(
+            #    fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
+            # print("Best parameter set: ", logr_gscv.best_params_)
+            #report(svc_gscv.best_estimator_, fe.unseen, svc_gscv.best_params_, 'svc')
+
             # =====================================
             # X TREE CLASSIFIER
             # =====================================
@@ -274,6 +311,7 @@ ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_p
 
             ensemble_estimator = ensemble_estimator.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
             report(ensemble_estimator, fe.unseen, classifiers.keys(), model_name='ensemble')
+
 
         log.to_csv('Logs/' + 'version' + str(test_version)+'_'+str(seed)+'.csv')
         with open('Pipelines/version'+str(test_version)+'_'+str(seed)+'.txt', 'w') as file:
