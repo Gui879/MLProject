@@ -14,10 +14,12 @@ import xgboost as xgb
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.model_selection import StratifiedKFold
 from bayes_opt import BayesianOptimization
+from gplearn.genetic import SymbolicRegressor,SymbolicClassifier
 from sklearn.svm import SVC
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
 from sklearn.metrics import silhouette_score
+
 
 def grid_search_MLP(training, param_grid, seed, cv=5):
     """ Multi-layer Perceptron classifier hyperparameter estimation using grid search with cross-validation.
@@ -98,6 +100,15 @@ def logistic_regression(training, param_grid, seed, cv=5):
 
     return clf_gscv
 
+def gp_grid_search(training, param_grid, seed, cv = 5):
+    pipeline = Pipeline([("gp",SymbolicClassifier(generations = 20, random_state = seed))])
+
+    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
+    clf_gscv.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
+
+    return clf_gscv
+
+
 def extraTreesClassifier(training, param_grid, seed, cv = 5):
 
     pipeline = Pipeline([ ("xtree",  ExtraTreesClassifier(random_state = seed))])
@@ -106,6 +117,12 @@ def extraTreesClassifier(training, param_grid, seed, cv = 5):
     clf_gscv.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
 
     return clf_gscv
+
+def gp(training, seed):
+    gp = SymbolicClassifier(generations = 50, random_state = seed)
+    gp.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
+
+    return gp
 
 def adaboost(training,seed):
     clf = AdaBoostClassifier(n_estimators=50, learning_rate=1, random_state=seed)
