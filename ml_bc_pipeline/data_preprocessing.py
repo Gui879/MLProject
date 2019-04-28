@@ -54,10 +54,10 @@ class Processor:
                          'MntSweetProducts', 'MntGoldProds', 'NumDealsPurchases', 'NumWebPurchases',
                          'NumCatalogPurchases', 'NumStorePurchases',
                          'NumWebVisitsMonth', 'Response']
-
+        print("Before input:",self.training.shape,self.unseen.shape)
         #Deal with missing values
         self._impute_missing_values()
-
+        print("Before outlier:", self.training.shape, self.unseen.shape)
         #Outlier Treatment
         #outliers = self._boxplot_outlier_detection()
         #self.training.drop(outliers,axis = 0,inplace = True)
@@ -520,9 +520,12 @@ class Processor:
 
     ### NORMALIZATION
     def _normalize(self):
+        print(self.training.shape,self.unseen.shape)
         self.report.append('_normalize')
         dummies = list(self.training.select_dtypes(include=["category", "object"]).columns)
         dummies.append('Response')
+        print(self.training.columns[~self.training.columns.isin(dummies)])
+        print(self.unseen.columns[~self.unseen.columns.isin(dummies)])
         scaler = MinMaxScaler()
         scaler.fit(self.training[self.training.columns[~self.training.columns.isin(dummies)]].values)
         self.training[self.training.columns[~self.training.columns.isin(dummies)]] = pd.DataFrame(

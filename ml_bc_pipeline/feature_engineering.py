@@ -40,9 +40,6 @@ class FeatureEngineer:
         #self.training = pd.concat([self.training, components], axis=1)
         #self.correlation_based_feature_selection(self.correlation_feature_ordering)
         #self.rank_features_chi_square()
-        self.feature_selection_rank(0.3, self.ga_feature_selection(LogisticRegression(solver='lbfgs')),
-                                    self.recursive_feature_elimination('Response', 10),
-                                    self.anova_F_selection('Response', 10))
         #self.feature_selection_rank(0.5,self.anova_F_selection('Response',20),self.extra_Trees_Classifier(20))
         #print("Feature Engeneering Completed!")
         #self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
@@ -90,7 +87,7 @@ class FeatureEngineer:
             dataset["RatioMeatProducts"] = dataset["MntMeatProducts"] / dataset["TotalMoneySpent"]
             dataset["RatioFishProducts"] = dataset["MntFishProducts"] / dataset["TotalMoneySpent"]
             dataset["RatioSweetProducts"] = dataset["MntSweetProducts"] / dataset["TotalMoneySpent"]
-            dataset["RatioGoldProdataset"] = dataset["MntGoldProds"] / dataset["TotalMoneySpent"]
+            dataset["RatioGoldProducts"] = dataset["MntGoldProds"] / dataset["TotalMoneySpent"]
             a = dataset["TotalMoneySpent"]
             dataset["MoneyPerPurchase"] = np.divide(a, b, out=np.zeros_like(a), where=b != 0)
             # Changing income to 2 years
