@@ -121,12 +121,15 @@ def main():
         #report(logr_gscv.best_estimator_, fe.unseeen, logr_gscv.best_params_,logistic_regression.__name__)
 
 
+
+        '''
+
         # =====================================
         # GENETIC PROGRAMMING
         # =====================================
-        '''
+       
         The sum of p_crossover, p_subtree_mutation, '
-ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_point_mutation should total to 1.0 or less.
+        ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_point_mutation should total to 1.0 or less.
         gp_param_grid = {'gp__p_crossover':[0.3, 0.6,0.9],
                          'gp__p_subtree_mutation':[0.01,0.10],
                          'gp__p_point_replace': [0.01, 0.05, 0.10],
@@ -136,8 +139,11 @@ ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_p
         gp_gscv = gp_grid_search(fe.training, gp_param_grid, seed)
         print("Best parameter set: ", gp_gscv.best_params_)
         '''
+
         #gp_est = gp(fe.training,seed)
         #report(gp_est,fe.unseen,model_name = 'gp')
+
+
 
         # =====================================
         # SVC (SUPPORT VECTOR MACHINE)
@@ -149,6 +155,8 @@ ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_p
         #svc_gscv = svc(fe.training, svc_param_grid, seed)
         #print("Best parameter set: ", svc_gscv.best_params_)
         # report(logr_gscv.best_estimator_, fe.unseeen, logr_gscv.best_params_,logistic_regression.__name__)
+
+
         # =====================================
         # X TREE CLASSIFIER
         # =====================================
@@ -193,9 +201,9 @@ ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_p
 
         ensemble_estimator = ensemble(fe.training, classifiers)
         report(ensemble_estimator, fe.unseen, classifiers.keys(), ensemble.__name__)
-        
+        '''
 
-
+        '''  
         params = {'mlp':{'model':grid_search_MLP, 'params': mlp_param_grid},
                   'dt':{'model':decision_tree, 'params': dt_param_grid},
                   'nb':{'model':naive_bayes, 'params': nb_param_grid}}
@@ -226,6 +234,7 @@ ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_p
             fe = FeatureEngineer(pr.training, pr.unseen,seed)
             pipeline['feature_engineering'] = fe.report
             print('feature_engineering')
+
 
             # =====================================
             # NEURAL NETWORK
@@ -275,7 +284,9 @@ ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_p
 
             #svc_gscv.best_estimator_ = svc_gscv.best_estimator_.fit(
             #    fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
+
             # print("Best parameter set: ", logr_gscv.best_params_)
+            
             #report(svc_gscv.best_estimator_, fe.unseen, svc_gscv.best_params_, 'svc')
 
             # =====================================
@@ -288,28 +299,35 @@ ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_p
             # XGBOOST
             # =====================================
 
-            xgb = xgb.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
+            xgb = xgboost(fe.training, seed)
             report(xgb, fe.unseen, model_name=xgboost.__name__)
 
             # =====================================
             # ADABOOST
             # =====================================
 
-            adaboost_ = adaboost_.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
+            adaboost_ = adaboost(fe.training, seed)
             report(adaboost_, fe.unseen, model_name='adaboost')
 
             # =====================================
             # GRADIENTBOOSTING
             # =====================================
 
-            gradientboost_ = gradientboost_.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
+            gradientboost_ = gradientBoosting(fe.training,seed)
             report(gradientboost_, fe.unseen, model_name='gradientboost')
 
             # =====================================
             # ENSEMBLE
             # =====================================
 
-            ensemble_estimator = ensemble_estimator.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
+            classifiers = {
+                'neural_net': mlp_gscv.best_estimator_,
+                'dt': dt_gscv.best_estimator_,
+                'nb': nb_gscv.best_estimator_,
+                'logr': logr_gscv.best_estimator_,
+            }
+
+            ensemble_estimator = ensemble(fe.training, classifiers)
             report(ensemble_estimator, fe.unseen, classifiers.keys(), model_name='ensemble')
 
 

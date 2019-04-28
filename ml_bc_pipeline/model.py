@@ -131,7 +131,7 @@ def adaboost(training,seed):
     return  clf
 
 def gradientBoosting(training, seed):
-    clf = GradientBoostingClassifier(n_estimators=20, learning_rate = 0.1, max_features=2, max_depth = 2, random_state = seed)
+    clf = GradientBoostingClassifier(n_estimators=20, learning_rate = 0.1, max_features=None, max_depth = 2, random_state = seed)
     clf.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
     return  clf
 
@@ -146,7 +146,7 @@ def xgboost(training,seed):
 
 
 def assess_generalization_auroc(estimator, unseen, print_graph):
-
+    print('shape >>> ', unseen.shape)
     y_score = estimator.predict_proba(unseen.loc[:, unseen.columns != "Response"].values)[:, 1]
     fpr, tpr, thresholds = roc_curve(unseen["Response"], y_score)
 
@@ -161,7 +161,11 @@ def assess_generalization_auroc(estimator, unseen, print_graph):
 
     report = classification_report(unseen["Response"], predicted, output_dict=True)
 
+<<<<<<< HEAD
     print(unseen["Response"],predicted)
+=======
+    #print(classification_report(unseen["Response"], predicted))
+>>>>>>> af388e836f6ca1d5773599b857ec5428daa17259
 
     recall_ = recall_score(unseen["Response"], predicted)
     f1_score_ = f1_score(unseen["Response"], predicted)
@@ -176,9 +180,9 @@ def assess_generalization_auroc(estimator, unseen, print_graph):
     stats['precision'] = precision_
     stats['f1_score'] = f1_score_
 
-    print('\n\nF1 Score >>> ', f1_score_)
-    print('Recall >>> ', recall_)
-    print('Precision >>> ', precision_)
+    #print('\n\nF1 Score >>> ', f1_score_)
+    #print('Recall >>> ', recall_)
+    #print('Precision >>> ', precision_)
 
     auc = roc_auc_score(unseen["Response"], y_score, average="weighted")
 
