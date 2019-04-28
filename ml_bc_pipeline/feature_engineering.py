@@ -32,45 +32,10 @@ class FeatureEngineer:
         self.unseen = unseen
         self.seed = seed
         self._extract_business_features()
-        if self.training.isnull().values.any() or self.unseen.isnull().values.any():
-            raise ValueError('business features')
-        #self.linear_regression_selection('Response',10)
-        #self.lda_extraction()
-        #self.linear_regression_selection('Response',10)
-        #components = self.multi_factor_analysis(self.training.shape[1],10)
-        #self.training = pd.concat([self.training, components], axis=1)
-        #self.box_cox_transformations()
-        if self.training.isnull().values.any() or self.unseen.isnull().values.any():
-            raise ValueError('box_cox')
-        self.correlation_based_feature_selection(self.correlation_feature_ordering)
-        #self.rank_features_chi_square()
-
-        self.feature_selection_rank(0.3, self.rank_features_chi_square(15),
-                                    self.recursive_feature_elimination('Response', 15),
-                                    self.all_inf_gain('Response', 15),
-                                    self.extra_Trees_Classifier(15))
-        if self.training.isnull().values.any() or self.unseen.isnull().values.any():
-            raise ValueError('feature_selection')
-
-        #self.feature_selection_rank(0.5,self.anova_F_selection('Response',20),self.extra_Trees_Classifier(20))
-        #print("Feature Engeneering Completed!")
-        #self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
-        #self.correlation_based_feature_selection(self.correlation_feature_ordering)
 
 
-        #self.box_cox_transformations()
-        #This Works
-        self.feature_selection_rank(0.3,self.rank_features_chi_square(15), self.recursive_feature_elimination('Response',15),self.all_inf_gain('Response',15), self.extra_Trees_Classifier(15))
-        #self.multi_factor_analysis(20, 100)
-        #self.box_cox_transformations()
-        #This Works
-        self.Adasyn_sampling()
-        #self.rank_features_chi_square(self.training.select_dtypes(exclude='category').columns ,self.training.select_dtypes(include='category').columns)
-
-
+        self.SMOTE_NC()
         print("Feature Engeneering Completed!")
-        #self.ga_feature_selection(LogisticRegression(solver = 'lbfgs'))
-
 
     def _extract_business_features(self):
         self.report.append('_extract_business_features')
@@ -539,7 +504,7 @@ class FeatureEngineer:
         # sampled_ds.index=ds.index
         sampled_ds.columns = ds.columns
         self.training = round(sampled_ds, 2)
-    
+
     def _normalize(self,training,unseen):
         dummies = list(training.select_dtypes(include=["category", "object"]).columns)
         dummies.append('Response')

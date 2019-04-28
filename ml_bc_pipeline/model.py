@@ -11,13 +11,15 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.naive_bayes import ComplementNB
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import VotingClassifier, AdaBoostClassifier, GradientBoostingClassifier
-import xgboost as xgb
+from xgboost import XGBClassifier
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.model_selection import StratifiedKFold
 from bayes_opt import BayesianOptimization
 from gplearn.genetic import SymbolicRegressor,SymbolicClassifier
 from sklearn.svm import SVC
 from sklearn.cluster import KMeans
+from ml_bc_pipeline.data_preprocessing import Processor
+from ml_bc_pipeline.feature_engineering import FeatureEngineer
 from sklearn.mixture import GaussianMixture
 from sklearn.metrics import silhouette_score
 
@@ -61,6 +63,7 @@ def bayes_optimization_MLP(training, param_grid, seed, cv=5):
         for train_index, test_index in skf.split(training.loc[:, (training.columns != "Response")].values,training["Response"].values):
             train = training.iloc[train_index]
             test = training.iloc[test_index]
+
             hidden_layer_sizes = param_grid['mlpc__hidden_layer_sizes'][int(round(hidden_layer_sizes,0))]
             learning_rate_init = param_grid['mlpc__learning_rate_init'][int(round(learning_rate_init,0))]
             model  = MLPClassifier(random_state=seed, hidden_layer_sizes=hidden_layer_sizes, learning_rate_init=learning_rate_init)
@@ -93,7 +96,7 @@ def naive_bayes(training, param_grid, seed=None, cv=5):
 
 def logistic_regression(training, param_grid, seed, cv=5):
 
-    pipeline = Pipeline([ ("lr", LogisticRegression(random_state=seed))])
+    pipeline = Pipeline([ ("lr", LogisticRegression(random_state=seed, max_iter = 200))])
 
     clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
     clf_gscv.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
@@ -108,19 +111,20 @@ def bo_logistic_regression(training, param_grid, seed, cv= 5):
         key = key.replace("lr" + '__', '')
         if type(value) == type(tuple([0,0])):
             n_param_grid[key] = value
+            print(value)
         else:
             n_param_grid[key] = (0, len(value)-1)
 
-    def ob_function(penalty, C, solver):
+    def ob_function(C):
         skf = StratifiedKFold(n_splits=cv, shuffle=True)
         for train_index, test_index in skf.split(training.loc[:, (training.columns != "Response")].values,training["Response"].values):
             train = training.iloc[train_index]
             test = training.iloc[test_index]
-            penalty = param_grid['penalty'][0]
-            solver =  param_grid['penalty'][int(round(solver,0))]
-            model  = LogisticRegression(random_state=seed,penalty = penalty,solver = solver,C = C )
-            model.fit(train.loc[:, (train.columns != "Response")].values, train["Response"].values)
-            y_pred = model.predict(test.drop('Response',axis = 1))
+            pr = Processor(train, test, seed)
+            fe = FeatureEngineer(pr.training, pr.unseen, seed)
+            model  = LogisticRegression(random_state=seed, C = C)
+            model.fit(fe.training.loc[:, (fe.training.columns != "Response")].values, fe.training["Response"].values)
+            y_pred = model.predict(fe.unseen.drop('Response',axis = 1))
             return profit(test['Response'],y_pred)
 
 
@@ -146,30 +150,39 @@ def extraTreesClassifier(training, param_grid, seed, cv = 5):
 
     return clf_gscv
 
-def gp(training, seed):
-    gp = SymbolicClassifier(generations = 50, random_state = seed)
-    gp.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
+def gp(training, param_grid, seed, cv=5):
 
-    return gp
+    pipeline = Pipeline([ ("gp", SymbolicRegressor(random_state=seed))])
+
+    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
+    clf_gscv.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
+
+    return clf_gscv
 
 def adaboost(training,seed):
     clf = AdaBoostClassifier(n_estimators=50, learning_rate=1, random_state=seed)
     clf.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
     return  clf
 
-def gradientBoosting(training, seed):
-    clf = GradientBoostingClassifier(n_estimators=20, learning_rate = 0.1, max_features=None, max_depth = 2, random_state = seed)
-    clf.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
-    return  clf
+def gradientBoosting(training, param_grid, seed,cv = 5):
+    pipeline = Pipeline([("gp", GradientBoostingClassifier(max_features=None, max_depth = 2, random_state = seed))])
+
+    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
+    clf_gscv.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
+
+    return clf_gscv
 
 def ensemble(training, classifiers):
     clf = VotingClassifier(estimators=list(classifiers.items()), voting='soft')
     clf.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
     return clf
 
-def xgboost(training,seed):
-    xgb_model = xgb.XGBClassifier(random_state=seed).fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
-    return xgb_model
+def xgboost(training,param_grid, seed, cv = 5):
+    pipeline = Pipeline([ ("xg", XGBClassifier(random_state=seed))])
+
+    xg_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
+    xg_gscv.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
+    return xg_gscv
 
 
 def assess_generalization_auroc(estimator, unseen, print_graph):

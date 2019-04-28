@@ -55,33 +55,10 @@ class Processor:
                          'NumCatalogPurchases', 'NumStorePurchases',
                          'NumWebVisitsMonth', 'Response']
         print("Before input:",self.training.shape,self.unseen.shape)
-        #Deal with missing values
 
-        self._impute_missing_values()
-
-
-        #Outlier Treatment
-        #outliers = self._boxplot_outlier_detection()
-        #self.training.drop(outliers,axis = 0,inplace = True)
-
-
-        self.outlier_rank(True,0.5,self._z_score_outlier_detection(3),self._boxplot_outlier_detection(ranking = True), self.isolation_forest(0.03,seed), self.mahalanobis_distance_outlier())
-
-
-        #print('after_outlier', self.training.shape)
-        #print('after_outlier', self.unseen.shape)
-
-        #self.mahalanobis_distance_outlier()
-        #print("===============================")
-        #print(self.outlier_rank(False, 0.5, self._boxplot_outlier_detection(ranking = True), self._z_score_outlier_detection(3)))
-        #print("===============================")
-
-        #self.mahalanobis_distance_outlier()
-
-        #self.outlier_rank(False, 0.5, self._boxplot_outlier_detection(ranking = True), self._z_score_outlier_detection(3))
-
-        #outliers = self.mahalanobis_distance_outlier()
-        #self.training.drop(outliers,axis = 0,inplace = True)
+        self._drop_missing_values()
+        outliers = self._boxplot_outlier_detection()
+        self.training.drop(outliers,axis = 0,inplace = True)
 
         #Normalization
         self._normalize()
