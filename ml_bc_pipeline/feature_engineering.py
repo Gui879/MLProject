@@ -45,10 +45,11 @@ class FeatureEngineer:
         #print("Feature Engeneering Completed!")
         #self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
         #self.correlation_based_feature_selection(self.correlation_feature_ordering)
-        #self.multi_factor_analysis(20,100)
+
         #self.box_cox_transformations()
         #This Works
-        #self.feature_selection_rank(0.3,self.ga_feature_selection(LogisticRegression(solver = 'lbfgs')), self.recursive_feature_elimination('Response',10), self.anova_F_selection('Response',10))
+        self.feature_selection_rank(0.3,self.ga_feature_selection(LogisticRegression(solver = 'lbfgs')), self.recursive_feature_elimination('Response',10), self.anova_F_selection('Response',10))
+        self.multi_factor_analysis(20, 100)
         self.SMOTE_NC()
         #self.rank_features_chi_square(self.training.select_dtypes(exclude='category').columns ,self.training.select_dtypes(include='category').columns)
 

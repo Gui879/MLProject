@@ -1,6 +1,7 @@
 import sys
 import numpy as np
 import pandas as pd
+import matplotlib
 import matplotlib.pyplot as plt
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV, cross_validate
@@ -147,7 +148,6 @@ def xgboost(training,seed):
 def assess_generalization_auroc(estimator, unseen, print_graph):
 
     y_score = estimator.predict_proba(unseen.loc[:, unseen.columns != "Response"].values)[:, 1]
-    print(len(y_score))
     fpr, tpr, thresholds = roc_curve(unseen["Response"], y_score)
 
     stats = {}
@@ -161,7 +161,7 @@ def assess_generalization_auroc(estimator, unseen, print_graph):
 
     report = classification_report(unseen["Response"], predicted, output_dict=True)
 
-    print(classification_report(unseen["Response"], predicted))
+    print(unseen["Response"],predicted)
 
     recall_ = recall_score(unseen["Response"], predicted)
     f1_score_ = f1_score(unseen["Response"], predicted)
@@ -245,13 +245,11 @@ def profit(y_true, y_score):
     revenue_ratio = best_revenue/total_revenue
     return revenue_ratio
 
-
 def svc(training, param_grid, seed, cv=5):
     pipeline = Pipeline([("svc", SVC(random_state=seed))])
 
     clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
     clf_gscv.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
-
 
 def cluster_model(training, unseen, classifiers, seed, cv=5):
 
@@ -262,17 +260,21 @@ def cluster_model(training, unseen, classifiers, seed, cv=5):
         km = km.fit(training.loc[:, training.columns != "Response"].values)
         Sum_of_squared_distances.append(km.inertia_)
 
-    plt.plot(K, Sum_of_squared_distances, 'bx-')
-    plt.xlabel('k')
-    plt.ylabel('Sum_of_squared_distances')
-    plt.title('Elbow Method For Optimal k')
-    plt.show()
-
-
-    print('Best number of clusters: ')
-    n_clusters_ = input()
-
-    n_clusters_ = int(n_clusters_)
+    #plt.plot(K, Sum_of_squared_distances, 'bx-')
+    #plt.xlabel('k')
+    #plt.ylabel('Sum_of_squared_distances')
+    #plt.title('Elbow Method For Optimal k')
+    #plt.show()
+    points = list(zip(K,Sum_of_squared_distances))
+    print(points)
+    slopes = []
+    for i in range(len(points)-2):
+        slopea = (points[i][1] - points[i+1][1])/(points[i][0]-points[i+1][0])
+        slopeb = (points[i+1][1] - points[i+2][1])/(points[i+1][0]-points[i+2][0])
+        slopes.append(slopea-slopeb)
+    n_clusters_ = np.argmax(slopes) +2
+    #print('Best number of clusters: ')
+    #n_clusters_ = int(n_clusters_)
 
     km = KMeans(n_clusters=n_clusters_)
     km = km.fit(training.loc[:, training.columns != "Response"].values)

@@ -86,7 +86,7 @@ def main():
 
         mlp_gscv = grid_search_MLP(fe.training, mlp_param_grid, seed)
         print("Best parameter set: ", mlp_gscv.best_params_)
-        #report(mlp_gscv.best_estimator_, fe.unseeen, mlp_gscv.best_params_, grid_search_MLP.__name__)
+        report(mlp_gscv.best_estimator_, fe.unseen, mlp_gscv.best_params_, grid_search_MLP.__name__)
 
         # =====================================
         # DECISION TREE
@@ -136,8 +136,8 @@ ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_p
         gp_gscv = gp_grid_search(fe.training, gp_param_grid, seed)
         print("Best parameter set: ", gp_gscv.best_params_)
         '''
-        gp_est = gp(fe.training,seed)
-        report(gp_est,fe.unseen,model_name = 'gp')
+        #gp_est = gp(fe.training,seed)
+        #report(gp_est,fe.unseen,model_name = 'gp')
 
         # =====================================
         # SVC (SUPPORT VECTOR MACHINE)
@@ -266,7 +266,7 @@ ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_p
             gp_gscv.best_estimator_ = gp_gscv.best_estimator_.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
             report(gp_gscv.best_estimator_, fe.unseen, gp_gscv.best_params_, 'gp')
             '''
-            gp_est = gp.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
+            gp_est = gp(fe.training, seed)
             report(gp_est, fe.unseen, model_name = 'gp')
 
             # =====================================
