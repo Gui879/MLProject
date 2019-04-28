@@ -59,15 +59,15 @@ class Processor:
         self._impute_missing_values()
 
         #Outlier Treatment
-        #outliers = self._boxplot_outlier_detection()
-        #self.training.drop(outliers,axis = 0,inplace = True)
+        outliers = self._boxplot_outlier_detection()
+        self.training.drop(outliers,axis = 0,inplace = True)
 
-        self.outlier_rank(True,0.5,self._z_score_outlier_detection(3),self._boxplot_outlier_detection(ranking = True))
+        #self.outlier_rank(True,0.5,self._z_score_outlier_detection(3),self._boxplot_outlier_detection(ranking = True))
 
 
         #self.mahalanobis_distance_outlier()
         #print("===============================")
-        print(self.outlier_rank(False, 0.5, self._boxplot_outlier_detection(ranking = True), self._z_score_outlier_detection(3)))
+        #print(self.outlier_rank(False, 0.5, self._boxplot_outlier_detection(ranking = True), self._z_score_outlier_detection(3)))
         #print("===============================")
 
         #self.mahalanobis_distance_outlier()

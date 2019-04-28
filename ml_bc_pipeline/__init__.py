@@ -5,7 +5,7 @@ from sklearn.model_selection import train_test_split, StratifiedKFold, KFold
 from ml_bc_pipeline.data_loader import Dataset
 from ml_bc_pipeline.data_preprocessing import Processor
 from ml_bc_pipeline.feature_engineering import FeatureEngineer
-from ml_bc_pipeline.model import gradientBoosting,grid_search_MLP, assess_generalization_auroc, decision_tree, naive_bayes, logistic_regression, xgboost, ensemble, adaboost, extraTreesClassifier
+from ml_bc_pipeline.model import gradientBoosting,grid_search_MLP, assess_generalization_auroc, decision_tree, naive_bayes, logistic_regression, xgboost, ensemble, adaboost, extraTreesClassifier,gp_grid_search,gp
 from datetime import datetime
 from os import listdir
 import json
@@ -118,7 +118,23 @@ def main():
         print("Best parameter set: ", logr_gscv.best_params_)
         #report(logr_gscv.best_estimator_, fe.unseeen, logr_gscv.best_params_,logistic_regression.__name__)
 
+        # =====================================
+        # GENETIC PROGRAMMING
+        # =====================================
+        '''
+        The sum of p_crossover, p_subtree_mutation, '
+ValueError: The sum of p_crossover, p_subtree_mutation, p_hoist_mutation and p_point_mutation should total to 1.0 or less.
+        gp_param_grid = {'gp__p_crossover':[0.3, 0.6,0.9],
+                         'gp__p_subtree_mutation':[0.01,0.10],
+                         'gp__p_point_replace': [0.01, 0.05, 0.10],
+                         'gp__p_subtree_mutation': [0.01, 0.10],
+                         'gp__p_subtree_mutation': [0.01, 0.10],}
 
+        gp_gscv = gp_grid_search(fe.training, gp_param_grid, seed)
+        print("Best parameter set: ", gp_gscv.best_params_)
+        '''
+        gp_est = gp(fe.training,seed)
+        report(gp_est,fe.unseen,model_name = 'gp')
         # =====================================
         # X TREE CLASSIFIER
         # =====================================
@@ -216,6 +232,15 @@ def main():
             #print("Best parameter set: ", logr_gscv.best_params_)
             report(logr_gscv.best_estimator_, fe.unseen, logr_gscv.best_params_,logistic_regression.__name__)
 
+            # =====================================
+            # GENETIC PROGRAMMING
+            # =====================================
+            '''
+            gp_gscv.best_estimator_ = gp_gscv.best_estimator_.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
+            report(gp_gscv.best_estimator_, fe.unseen, gp_gscv.best_params_, 'gp')
+            '''
+            gp_est = gp.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
+            report(gp_est, fe.unseen, model_name = 'gp')
             # =====================================
             # X TREE CLASSIFIER
             # =====================================
