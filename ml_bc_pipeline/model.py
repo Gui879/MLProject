@@ -96,7 +96,7 @@ def naive_bayes(training, param_grid, seed=None, cv=5):
 
 def logistic_regression(training, param_grid, seed, cv=5):
 
-    pipeline = Pipeline([ ("lr", LogisticRegression(random_state=seed, max_iter = 200))])
+    pipeline = Pipeline([ ("lr", LogisticRegression(random_state=seed))])
 
     clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
     clf_gscv.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
@@ -132,15 +132,6 @@ def bo_logistic_regression(training, param_grid, seed, cv= 5):
     b_optimizer.maximize(n_iter = 300, init_points = 100)
     return b_optimizer
 
-def gp_grid_search(training, param_grid, seed, cv = 5):
-    pipeline = Pipeline([("gp",SymbolicClassifier(generations = 20, random_state = seed))])
-
-    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
-    clf_gscv.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
-
-    return clf_gscv
-
-
 def extraTreesClassifier(training, param_grid, seed, cv = 5):
 
     pipeline = Pipeline([ ("xtree",  ExtraTreesClassifier(random_state = seed))])
@@ -150,10 +141,18 @@ def extraTreesClassifier(training, param_grid, seed, cv = 5):
 
     return clf_gscv
 
+def gp_grid_search(training, param_grid, seed, cv = 5):
+    pipeline = Pipeline([("gp",SymbolicClassifier( random_state = seed))])
+
+    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
+    clf_gscv.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
+
+    return clf_gscv
+
 def gp(training, param_grid, seed, cv=5):
 
-    pipeline = Pipeline([ ("gp", SymbolicRegressor(random_state=seed))])
-
+    pipeline = Pipeline([ ("gp", SymbolicClassifier(random_state=seed))])
+    print("gp>>>",training.shape)
     clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
     clf_gscv.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
 
@@ -165,7 +164,7 @@ def adaboost(training,seed):
     return  clf
 
 def gradientBoosting(training, param_grid, seed,cv = 5):
-    pipeline = Pipeline([("gp", GradientBoostingClassifier(max_features=None, max_depth = 2, random_state = seed))])
+    pipeline = Pipeline([("gr", GradientBoostingClassifier(max_features=None, max_depth = 2, random_state = seed))])
 
     clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
     clf_gscv.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
@@ -173,6 +172,7 @@ def gradientBoosting(training, param_grid, seed,cv = 5):
     return clf_gscv
 
 def ensemble(training, classifiers):
+
     clf = VotingClassifier(estimators=list(classifiers.items()), voting='soft')
     clf.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
     return clf

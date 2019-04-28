@@ -83,7 +83,7 @@ def main():
         logr_param_grid = {'lr__penalty': ['l1', 'l2'],
                            'lr__C': np.logspace(-4, 4, 20),
                            'lr__solver': ['liblinear'],
-                           'lr__max_iterations':[100,200]}
+                           'lr__max_iter':[100,200]}
 
         logr_gscv = logistic_regression(fe.training, logr_param_grid, seed)
 
@@ -95,9 +95,9 @@ def main():
         xgb = xgboost(fe.training, xg_param_grid, seed)
 
         #GP
-        gp_param_grid = {'gp__generations':[50,100,200],
-                         'gp__tournament_size':[20,30],
-                         'gp__population_size':[500,1000]}
+        gp_param_grid = {'gp__generations':[50,100],
+                         'gp__tournament_size':[20],
+                         'gp__population_size':[1000]}
 
         gp_gscv = gp(fe.training, gp_param_grid, seed)
 
@@ -107,6 +107,7 @@ def main():
                          'gr__n_estimators': [500, 1000]}
 
         gr_gscv = gradientBoosting(fe.training, gr_param_grid, seed)
+
 
         # Change partition
         if kfold_simple:
@@ -138,7 +139,7 @@ def main():
             # =====================================
 
             logr_gscv.best_estimator_ = logr_gscv.best_estimator_.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
-            #print("Best parameter set: ", logr_gscv.best_params_)
+            print("Best parameter set: ", logr_gscv.best_params_)
             report(logr_gscv.best_estimator_, fe.unseen, logr_gscv.best_params_,logistic_regression.__name__)
 
             # =====================================
@@ -147,23 +148,33 @@ def main():
 
             xgb.best_estimator_ = xgb.best_estimator_.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
             report(xgb.best_estimator_, fe.unseen, xgb.best_params_,'xgb')
-
+            print("Best parameter set: ", xgb.best_estimator_)
             # =====================================
             # GENETIC PROGRAMMING
             # =====================================
             gp_gscv.best_estimator_ = gp_gscv.best_estimator_.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
             report(gp_gscv.best_estimator_, fe.unseen, gp_gscv.best_params_,'gp')
-
+            print("Best parameter set: ", gp_gscv.best_params_)
             # =====================================
             # GRADIENT BOOST
             # =====================================
 
             gr_gscv.best_estimator_ = gr_gscv.best_estimator_.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
             report(gr_gscv.best_estimator_, fe.unseen, gr_gscv.best_params_,'gr')
-
+            print("Best parameter set: ", gr_gscv.best_params_)
             # =====================================
             # ENSEMBLE
             # =====================================
+            classifiers = {
+                'xg': xgb.best_estimator_,
+                'gr': gr_gscv.best_estimator_,
+                'gp': gp_gscv.best_estimator_,
+                'lr': logr_gscv.best_estimator_,
+            }
+
+            en_gscv = ensemble(fe.training, classifiers)
+            report(en_gscv.best_estimator_, fe.unseen, en_gscv.best_params_, 'en')
+            print("Best parameter set: ", en_gscv.best_params_)
 
         log.to_csv('Logs/' + 'version' + str(test_version) + '_' + str(seed) + '.csv')
         with open('Pipelines/version' + str(test_version) + '_' + str(seed) + '.txt', 'w') as file:
