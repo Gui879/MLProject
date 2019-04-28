@@ -69,7 +69,7 @@ def main():
 
     for seed in range(5):
         # +++++++++++++++++ 3) preprocess, based on train
-        pr = Processor(DF_train, DF_unseen, seed)
+        pr = Processor(DF_train.copy(), DF_unseen.copy(), seed)
         pipeline['preprocessing'] = pr.report
 
         # +++++++++++++++++ 4) feature engineering
