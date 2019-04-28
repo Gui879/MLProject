@@ -45,8 +45,8 @@ class FeatureEngineer:
         #self.feature_selection_rank(0.5,self.anova_F_selection('Response',20),self.extra_Trees_Classifier(20))
         #print("Feature Engeneering Completed!")
         #self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
-        self.correlation_based_feature_selection(self.correlation_feature_ordering)
-        self.pca_extraction()
+        #self.correlation_based_feature_selection(self.correlation_feature_ordering)
+        self.multi_factor_analysis(20,100)
         self.SMOTE_NC()
 
         #self.rank_features_chi_square(self.training.select_dtypes(exclude='category').columns ,self.training.select_dtypes(include='category').columns)
@@ -231,17 +231,25 @@ class FeatureEngineer:
         check_input = True,
         engine = 'auto',
         random_state = self.seed)
-        mfa.fit(X)
+        components = mfa.fit_transform(X,self.training['Response']).values
         inertia = mfa.explained_inertia_
-        components = mfa.row_coordinates(X)
         t = 0
-        f_components = []
+        n_components = 0
         for col in range(len(inertia)):
             t += inertia[col]
-            f_components.append(components[col])
+            n_components = n_components + 1
             if t >= 0.8:
                 break
-        return pd.DataFrame(f_components, columns = ['C_' + str(i) for i in range(len(f_components))])
+        un_components = mfa.transform(self.unseen.drop('Response', axis = 1)).values
+        transformed = pd.DataFrame(components[:,:n_components], columns = ['C_' + str(i) for i in range(n_components)])
+        transformed_un = pd.DataFrame(un_components[:,:n_components], columns = ['C_' + str(i) for i in range(n_components)])
+        training_components, testing_components = self._normalize(transformed, transformed_un)
+        self.training['Response'].index = training_components.index
+        training_components['Response'] = self.training['Response']
+        self.unseen['Response'].index = testing_components.index
+        testing_components['Response'] = self.unseen['Response']
+        self.training = training_components
+        self.unseen = testing_components
 
     ########FEATURE SELECTION################################
 

@@ -61,10 +61,10 @@ class Processor:
         #outliers = self._boxplot_outlier_detection()
         #self.training.drop(outliers,axis = 0,inplace = True)
 
-        #self.outlier_rank(False,0.5,self._z_score_outlier_detection(3),self._boxplot_outlier_detection())
+        self.outlier_rank(True,0.5,self._z_score_outlier_detection(3),self._boxplot_outlier_detection(ranking = True))
 
 
-        self.mahalanobis_distance_outlier()
+        #self.mahalanobis_distance_outlier()
         #print("===============================")
         print(self.outlier_rank(False, 0.5, self._boxplot_outlier_detection(ranking = True), self._z_score_outlier_detection(3)))
         #print("===============================")
@@ -73,8 +73,8 @@ class Processor:
 
         #self.outlier_rank(False, 0.5, self._boxplot_outlier_detection(ranking = True), self._z_score_outlier_detection(3))
 
-        outliers = self.mahalanobis_distance_outlier()
-        self.training.drop(outliers,axis = 0,inplace = True)
+        #outliers = self.mahalanobis_distance_outlier()
+        #self.training.drop(outliers,axis = 0,inplace = True)
 
         #Normalization
         self._normalize()
@@ -342,7 +342,7 @@ class Processor:
         MDs = pd.Series([distance for sublist in MDs for distance in sublist], index=ds.index)
 
         def find_outliers(MDs, percent = 0.03):
-            treshold = 1.5
+            treshold = 3
             std = np.std(MDs)
             k = treshold * std
             m = np.mean(MDs)
