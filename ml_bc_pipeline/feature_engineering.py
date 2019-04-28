@@ -13,10 +13,15 @@ from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.feature_selection import RFE, SelectKBest, f_classif
 from sklearn.linear_model import LogisticRegression
 import statsmodels.api as sm
+from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import KBinsDiscretizer, MinMaxScaler,PowerTransformer
-
+from imblearn.over_sampling import SMOTENC,SMOTE,ADASYN
 from ga_feature_selection.feature_selection_ga import FeatureSelectionGA
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import KFold
+
 from prince import MFA
+
 
 class FeatureEngineer:
 
@@ -27,7 +32,6 @@ class FeatureEngineer:
         self.unseen = unseen
         self.seed = seed
         self._extract_business_features()
-
 
         #self.linear_regression_selection('Response',10)
         #self.lda_extraction()
@@ -40,10 +44,11 @@ class FeatureEngineer:
         #self.feature_selection_rank(0.5,self.anova_F_selection('Response',20),self.extra_Trees_Classifier(20))
         #print("Feature Engeneering Completed!")
         #self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
-        #components = self.pca_extraction()
-        #self.training = pd.concat([self.training,components],axis = 1)
-
         #self.correlation_based_feature_selection(self.correlation_feature_ordering)
+        self.multi_factor_analysis(20,100)
+        self.SMOTE_NC()
+
+        #self.rank_features_chi_square(self.training.select_dtypes(exclude='category').columns ,self.training.select_dtypes(include='category').columns)
 
 
         print("Feature Engeneering Completed!")
@@ -143,9 +148,10 @@ class FeatureEngineer:
 
     def pca_extraction(self,threshold = 0.8):
         self.report.append('pca_extraction')
-        ds = self.training.copy().loc[:, self.training.dtypes != 'category'].drop('Response',axis = 1)
-        pca = PCA()
-        pca.fit(ds.values.T)
+        ds_training = self.training.copy().loc[:, self.training.dtypes != 'category'].drop('Response',axis = 1)
+        ds_testing = self.unseen.copy().loc[:, self.unseen.dtypes != 'category'].drop('Response', axis=1)
+        pca = PCA(random_state = self.seed)
+        train_components = pca.fit_transform(ds_training.values,10)
         explained = 0
         final_components = 0
         for component in pca.explained_variance_ratio_:
@@ -153,8 +159,19 @@ class FeatureEngineer:
             final_components = final_components + 1
             if explained >= threshold:
                 break
-        pca_components = pca.components_[:final_components]
-        return pd.DataFrame(pca_components.T, columns = ['C_' + str(col) for col in range(final_components)],index = self.training.index)
+        pca_components = train_components[:,:final_components]
+        training_components = pd.DataFrame(pca_components, columns=['C_' + str(col) for col in range(final_components)],index=self.training.index)
+        test_components = pca.transform(ds_testing.values)
+        print(final_components)
+        pca_components = test_components[:,:final_components]
+        testing_components = pd.DataFrame(pca_components, columns=['C_' + str(col) for col in range(final_components)],index=self.unseen.index)
+        print(testing_components.shape)
+        training_components, testing_components = self._normalize(training_components, testing_components)
+        training_components['Response'] = self.training['Response']
+        testing_components['Response'] = self.unseen['Response']
+        self.training = training_components
+        self.unseen = testing_components
+        print(self.training.columns, self.unseen.columns)
 
     def _drop_constant_features(self):
         self.report.append('_drop_constant_features')
@@ -218,17 +235,25 @@ class FeatureEngineer:
         check_input = True,
         engine = 'auto',
         random_state = self.seed)
-        mfa.fit(X)
+        components = mfa.fit_transform(X,self.training['Response']).values
         inertia = mfa.explained_inertia_
-        components = mfa.row_coordinates(X)
         t = 0
-        f_components = []
+        n_components = 0
         for col in range(len(inertia)):
             t += inertia[col]
-            f_components.append(components[col])
+            n_components = n_components + 1
             if t >= 0.8:
                 break
-        return pd.DataFrame(f_components, columns = ['C_' + str(i) for i in range(len(f_components))])
+        un_components = mfa.transform(self.unseen.drop('Response', axis = 1)).values
+        transformed = pd.DataFrame(components[:,:n_components], columns = ['C_' + str(i) for i in range(n_components)])
+        transformed_un = pd.DataFrame(un_components[:,:n_components], columns = ['C_' + str(i) for i in range(n_components)])
+        training_components, testing_components = self._normalize(transformed, transformed_un)
+        self.training['Response'].index = training_components.index
+        training_components['Response'] = self.training['Response']
+        self.unseen['Response'].index = testing_components.index
+        testing_components['Response'] = self.unseen['Response']
+        self.training = training_components
+        self.unseen = testing_components
 
     ########FEATURE SELECTION################################
 
@@ -259,7 +284,7 @@ class FeatureEngineer:
 
     def get_top(self, criteria="chisq", n_top=10):
         input_features = list(self._rank[criteria].index[0:n_top])
-        input_features.append("DepVar")
+        input_features.append("Response")
         return self.training[input_features], self.unseen[input_features]
 
     def linear_regression_selection(self, vd, n):
@@ -396,7 +421,6 @@ class FeatureEngineer:
         kept_vars = list({k for (k, v) in ratios.items() if v > treshold})
         self.training = self.training[kept_vars]
         self.unseen = self.unseen[kept_vars]
-        print('after\n')
         print(self.training.head())
 
     def correlation_feature_ordering(self):
@@ -434,6 +458,7 @@ class FeatureEngineer:
             del variables_list[key]
         print(len(variables_list.keys()))
         self.training = self.training[list(variables_list.keys())+['Response']]
+        self.unseen = self.unseen[list(variables_list.keys()) + ['Response']]
 
     def ga_feature_selection(self,model):
 
@@ -444,5 +469,109 @@ class FeatureEngineer:
 
         return self.training.loc[:, self.training.columns != "Response"].columns[np.where(np.array(feature_selection.best_ind)==1)]
 
+    #SAMPLING
 
+    def SMOTE_NC(self):
+        categories = self.training.dtypes
+        self.report.append('SMOTE_NC_sampling')
+        Y = self.training["Response"]
+        X = self.training.drop(columns=["Response"])
+        x_cols = X.columns
+        cat_cols = X.loc[:, self.training.dtypes == 'category'].columns
+        if len(cat_cols) > 0:
+            sm = SMOTENC(random_state=self.seed, categorical_features=[cat_cols.get_loc(col) for col in cat_cols])
+        else:
+            sm = SMOTE(random_state=self.seed)
+        X_res, Y_res = sm.fit_resample(X.values, Y.values)
+        sampled_ds = pd.DataFrame(X_res, columns=x_cols)
+        sampled_ds['Response'] = Y_res
+        # sampled_ds.index=ds.index
+        self.training = sampled_ds
+
+    def SMOTE_sampling(self, ds):
+        self.report.append('SMOTE_sampling')
+        Y = ds["Response"]
+        X = ds.drop(columns=["Response"])
+        sm = SMOTE(random_state=self.seed)
+        X_res, Y_res = sm.fit_resample(X, Y)
+        sampled_ds = pd.DataFrame(X_res)
+        sampled_ds['Response'] = Y_res
+        # sampled_ds.index=ds.index
+        sampled_ds.columns = ds.columns
+        return round(sampled_ds, 2)
+
+    def Adasyn_sampling(self, ds):
+        self.report.append('Adasyn_sampling')
+        Y = ds["Response"]
+        X = ds.drop(columns=["Response"])
+        ada = ADASYN(random_state=self.seed)
+        X_res, Y_res = ada.fit_resample(X, Y)
+        sampled_ds = pd.DataFrame(X_res)
+        sampled_ds['Response'] = Y_res
+        # sampled_ds.index=ds.index
+        sampled_ds.columns = ds.columns
+        return round(sampled_ds, 2)
+    
+    def _normalize(self,training,unseen):
+        dummies = list(training.select_dtypes(include=["category", "object"]).columns)
+        dummies.append('Response')
+        scaler = MinMaxScaler()
+        scaler.fit(training.values)
+        training = pd.DataFrame(scaler.transform(training.values), columns=training.columns, index=training.index)
+        print(unseen.shape)
+        unseen = pd.DataFrame(scaler.transform(unseen.values), columns=unseen.columns, index=unseen.index)
+        return training, unseen
+
+    def decision_tree_forward(self, n_selected_features):
+        """
+        This function implements the forward feature selection algorithm based on decision tree
+
+        Input
+        -----
+        X: {numpy array}, shape (n_samples, n_features)
+            input data
+        y: {numpy array}, shape (n_samples, )
+            input class labels
+        n_selected_features: {int}
+            number of selected features
+
+        Output
+        ------
+        F: {numpy array}, shape (n_features,)
+            index of selected features
+        """
+
+        x_train = self.training.loc[:, self.training.columns!='Response'].values
+        y = self.training['Response'].values
+        n_samples, n_features = x_train.shape
+        # using 10 fold cross validation
+        cv = KFold(n_splits=10, shuffle=True)
+        # choose decision tree as the classifier
+        clf = DecisionTreeClassifier()
+
+        # selected feature set, initialized to be empty
+        F = []
+        count = 0
+        while count < n_selected_features:
+            max_acc = 0
+            for i in range(n_features):
+                if i not in F:
+                    F.append(i)
+                    X_tmp = x_train[:, F]
+                    acc = 0
+                    for train, test in cv.split(x_train,y):
+                        clf.fit(X_tmp[train], y[train])
+                        y_predict = clf.predict(X_tmp[test])
+                        acc_tmp = accuracy_score(y[test], y_predict)
+                        acc += acc_tmp
+                    acc = float(acc) / 10
+                    F.pop()
+                    # record the feature which results in the largest accuracy
+                    if acc > max_acc:
+                        max_acc = acc
+                        idx = i
+            # add the feature which results in the largest accuracy
+            F.append(idx)
+            count += 1
+        return self.training.loc[:, self.training.columns!='Response'].columns[np.array(F)].values
 
