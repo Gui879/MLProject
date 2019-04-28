@@ -66,7 +66,19 @@ def main():
     # +++++++++++++++++ 2) split into train and unseen
     DF_train, DF_unseen = train_test_split(ds.copy(), test_size=0.2, stratify=ds["Response"], random_state=0)
 
-    for seed in range(5):
+    '''
+    #EVALUATION
+    # +++++++++++++++++ 3) preprocess, based on train
+    pr = Processor(DF_train.copy(), DF_unseen.copy(), 0)
+    pipeline['preprocessing'] = pr.report
+
+    # +++++++++++++++++ 4) feature engineering
+    fe = FeatureEngineer(pr.training, pr.unseen, 0)
+    pipeline['feature_engineering'] = fe.report
+    '''
+
+    #best_estimator =
+    for seed in range(2,5):
         # +++++++++++++++++ 3) preprocess, based on train
         pr = Processor(DF_train.copy(), DF_unseen.copy(), seed)
         pipeline['preprocessing'] = pr.report
