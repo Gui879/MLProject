@@ -14,7 +14,7 @@ from sklearn.feature_selection import RFE, SelectKBest, f_classif
 from sklearn.linear_model import LogisticRegression
 import statsmodels.api as sm
 from sklearn.preprocessing import KBinsDiscretizer, MinMaxScaler,PowerTransformer
-
+from imblearn.over_sampling import SMOTENC,SMOTE,ADASYN
 from ga_feature_selection.feature_selection_ga import FeatureSelectionGA
 from prince import MFA
 
@@ -40,10 +40,9 @@ class FeatureEngineer:
         #self.feature_selection_rank(0.5,self.anova_F_selection('Response',20),self.extra_Trees_Classifier(20))
         #print("Feature Engeneering Completed!")
         #self.ga_feature_selection(LogisticRegression(solver='lbfgs'))
-        #components = self.pca_extraction()
-        #self.training = pd.concat([self.training,components],axis = 1)
-
-        #self.correlation_based_feature_selection(self.correlation_feature_ordering)
+        self.correlation_based_feature_selection(self.correlation_feature_ordering)
+        self.pca_extraction()
+        self.SMOTE_NC()
 
 
         print("Feature Engeneering Completed!")
@@ -138,9 +137,10 @@ class FeatureEngineer:
 
     def pca_extraction(self,threshold = 0.8):
         self.report.append('pca_extraction')
-        ds = self.training.copy().loc[:, self.training.dtypes != 'category'].drop('Response',axis = 1)
-        pca = PCA()
-        pca.fit(ds.values.T)
+        ds_training = self.training.copy().loc[:, self.training.dtypes != 'category'].drop('Response',axis = 1)
+        ds_testing = self.unseen.copy().loc[:, self.unseen.dtypes != 'category'].drop('Response', axis=1)
+        pca = PCA(random_state = self.seed)
+        train_components = pca.fit_transform(ds_training.values,10)
         explained = 0
         final_components = 0
         for component in pca.explained_variance_ratio_:
@@ -148,8 +148,19 @@ class FeatureEngineer:
             final_components = final_components + 1
             if explained >= threshold:
                 break
-        pca_components = pca.components_[:final_components]
-        return pd.DataFrame(pca_components.T, columns = ['C_' + str(col) for col in range(final_components)],index = self.training.index)
+        pca_components = train_components[:,:final_components]
+        training_components = pd.DataFrame(pca_components, columns=['C_' + str(col) for col in range(final_components)],index=self.training.index)
+        test_components = pca.transform(ds_testing.values)
+        print(final_components)
+        pca_components = test_components[:,:final_components]
+        testing_components = pd.DataFrame(pca_components, columns=['C_' + str(col) for col in range(final_components)],index=self.unseen.index)
+        print(testing_components.shape)
+        training_components, testing_components = self._normalize(training_components, testing_components)
+        training_components['Response'] = self.training['Response']
+        testing_components['Response'] = self.unseen['Response']
+        self.training = training_components
+        self.unseen = testing_components
+        print(self.training.columns, self.unseen.columns)
 
     def _drop_constant_features(self):
         self.report.append('_drop_constant_features')
@@ -429,6 +440,7 @@ class FeatureEngineer:
             del variables_list[key]
         print(len(variables_list.keys()))
         self.training = self.training[list(variables_list.keys())+['Response']]
+        self.unseen = self.unseen[list(variables_list.keys()) + ['Response']]
 
     def ga_feature_selection(self,model):
 
@@ -439,5 +451,57 @@ class FeatureEngineer:
 
         return self.training.loc[:, self.training.columns != "Response"].columns[np.where(np.array(feature_selection.best_ind)==1)]
 
+    #SAMPLING
+
+    def SMOTE_NC(self):
+        categories = self.training.dtypes
+        self.report.append('SMOTE_NC_sampling')
+        Y = self.training["Response"]
+        X = self.training.drop(columns=["Response"])
+        x_cols = X.columns
+        cat_cols = X.loc[:, self.training.dtypes == 'category'].columns
+        if len(cat_cols) > 0:
+            sm = SMOTENC(random_state=self.seed, categorical_features=[cat_cols.get_loc(col) for col in cat_cols])
+        else:
+            sm = SMOTE(random_state=self.seed)
+        X_res, Y_res = sm.fit_resample(X.values, Y.values)
+        sampled_ds = pd.DataFrame(X_res, columns=x_cols)
+        sampled_ds['Response'] = Y_res
+        # sampled_ds.index=ds.index
+        self.training = sampled_ds
+
+    def SMOTE_sampling(self, ds):
+        self.report.append('SMOTE_sampling')
+        Y = ds["Response"]
+        X = ds.drop(columns=["Response"])
+        sm = SMOTE(random_state=self.seed)
+        X_res, Y_res = sm.fit_resample(X, Y)
+        sampled_ds = pd.DataFrame(X_res)
+        sampled_ds['Response'] = Y_res
+        # sampled_ds.index=ds.index
+        sampled_ds.columns = ds.columns
+        return round(sampled_ds, 2)
+
+    def Adasyn_sampling(self, ds):
+        self.report.append('Adasyn_sampling')
+        Y = ds["Response"]
+        X = ds.drop(columns=["Response"])
+        ada = ADASYN(random_state=self.seed)
+        X_res, Y_res = ada.fit_resample(X, Y)
+        sampled_ds = pd.DataFrame(X_res)
+        sampled_ds['Response'] = Y_res
+        # sampled_ds.index=ds.index
+        sampled_ds.columns = ds.columns
+        return round(sampled_ds, 2)
+    
+    def _normalize(self,training,unseen):
+        dummies = list(training.select_dtypes(include=["category", "object"]).columns)
+        dummies.append('Response')
+        scaler = MinMaxScaler()
+        scaler.fit(training.values)
+        training = pd.DataFrame(scaler.transform(training.values), columns=training.columns, index=training.index)
+        print(unseen.shape)
+        unseen = pd.DataFrame(scaler.transform(unseen.values), columns=unseen.columns, index=unseen.index)
+        return training, unseen
 
 
