@@ -11,16 +11,16 @@ class Dataset:
 
     """
 
-    def __init__(self, full_path):
+    def __init__(self, full_path, unseen = False):
         self.rm_df = pd.read_excel(full_path)
         self.rm_df.set_index('ID',inplace=True)
         self._drop_duplicates(full_path)
-        self._drop_metadata_features()
+        self._drop_metadata_features(unseen = unseen)
         #self._drop_doubleback_features()
         self._drop_unusual_classes()
         #self._label_encoder()
         #self._as_category()
-        self._days_since_customer()
+        self._days_since_customer(unseen = unseen)
         self._generate_dummies()
         print("Finnished loading data!")
 
@@ -51,10 +51,13 @@ class Dataset:
         self.rm_df.drop_duplicates(inplace = True)
         self.rm_df.drop_duplicates(subset = list(set(self.rm_df.columns) - set('Response')), keep = False)
 
-    def _drop_metadata_features(self):
+    def _drop_metadata_features(self,unseen = True):
         #To be used for profit calculations
-        metadata_features = ['Z_CostContact','Z_Revenue']
-        self.rm_df.drop(labels=metadata_features, axis=1, inplace=True)
+        if unseen:
+            pass
+        else:
+            metadata_features = ['Z_CostContact','Z_Revenue']
+            self.rm_df.drop(labels=metadata_features, axis=1, inplace=True)
 
     def _drop_doubleback_features(self):
         """ Drops perfectly correlated feature
@@ -62,8 +65,6 @@ class Dataset:
             From metadata we know that there are two purchase channels: by Catalogue
             or by Internet. One is the opposite of another, reason why we will remove
             one of them, for example, the NetPurchase.
-
-
         """
 
         #In our problem we have no doubleback features
@@ -94,7 +95,7 @@ class Dataset:
 
         pass
 
-    def _as_category(self):
+    def _as_category(self, unseen):
         """ Encodes Recomendation and Dependents as categories
 
             Explicitly encodes Recomendation and Dependents as categorical features.
@@ -109,9 +110,12 @@ class Dataset:
         self.rm_df["AcceptedCmp4"] = self.rm_df["AcceptedCmp4"].astype('category')
         self.rm_df["AcceptedCmp5"] = self.rm_df["AcceptedCmp5"].astype('category')
         self.rm_df["Complain"] = self.rm_df["Complain"].astype('category')
-        self.rm_df["Response"] = self.rm_df["Response"].astype('category')
+        if unseen:
+            pass
+        else:
+            self.rm_df["Response"] = self.rm_df["Response"].astype('category')
 
-    def _days_since_customer(self):
+    def _days_since_customer(self, unseen):
         """ Encodes Dt_Customer (n days since customer)
 
             Similarly to the label encoder, we have to transform the Dt_Customer in order to feed numerical
@@ -119,8 +123,12 @@ class Dataset:
             example, the date when the data was extracted from the source - assume it was on 18/02/1993.
 
         """
+        if unseen:
+            self.rm_df['Dt_Customer'] = self.rm_df.Dt_Customer.apply(str)
         self.rm_df.Dt_Customer = pd.to_datetime(self.rm_df['Dt_Customer'].str.replace('-', ''), format='%Y%m%d', errors='ignore')
         ref_date = datetime.date(datetime.now())
+        if unseen:
+            self.rm_df['Dt_Customer'] = pd.to_datetime(self.rm_df.Dt_Customer)
         ser = self.rm_df['Dt_Customer'].apply(func=datetime.date)
         self.rm_df["Dt_Customer"] = ser.apply(func=lambda x: (ref_date - x).days)
 

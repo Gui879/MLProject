@@ -22,6 +22,8 @@ from ml_bc_pipeline.data_preprocessing import Processor
 from ml_bc_pipeline.feature_engineering import FeatureEngineer
 from sklearn.mixture import GaussianMixture
 from sklearn.metrics import silhouette_score
+from bayes_opt.observer import JSONLogger
+from bayes_opt.event import Events
 
 
 def grid_search_MLP(training, param_grid, seed, cv=5):
@@ -105,6 +107,8 @@ def logistic_regression(training, param_grid, seed, cv=5):
     return clf_gscv
 
 def bo_logistic_regression(training, param_grid, seed, cv= 5):
+    logger = JSONLogger(path="./logs.json")
+
 
     n_param_grid = {}
     for key, value in param_grid.items():
@@ -113,7 +117,7 @@ def bo_logistic_regression(training, param_grid, seed, cv= 5):
             n_param_grid[key] = value
             print(value)
         else:
-            n_param_grid[key] = (0, len(value)-1)
+            n_param_grid[key] = (0, 1)
 
     def ob_function(C):
         skf = StratifiedKFold(n_splits=cv, shuffle=True)
@@ -122,14 +126,15 @@ def bo_logistic_regression(training, param_grid, seed, cv= 5):
             test = training.iloc[test_index]
             pr = Processor(train, test, seed)
             fe = FeatureEngineer(pr.training, pr.unseen, seed)
-            model  = LogisticRegression(random_state=seed, C = C)
+            model  = LogisticRegression(random_state=seed, C = C, max_iter=200,)
             model.fit(fe.training.loc[:, (fe.training.columns != "Response")].values, fe.training["Response"].values)
             y_pred = model.predict(fe.unseen.drop('Response',axis = 1))
             return profit(test['Response'],y_pred)
 
 
-    b_optimizer = BayesianOptimization(f=ob_function, pbounds=n_param_grid, random_state=1)
-    b_optimizer.maximize(n_iter = 300, init_points = 100)
+    b_optimizer = BayesianOptimization(f=ob_function, pbounds=n_param_grid, random_state=1,)
+    b_optimizer.subscribe(Events.OPTMIZATION_STEP, logger)
+    b_optimizer.maximize(n_iter = 100, init_points = 50)
     return b_optimizer
 
 def extraTreesClassifier(training, param_grid, seed, cv = 5):

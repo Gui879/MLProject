@@ -33,7 +33,7 @@ class FeatureEngineer:
         self.seed = seed
         self._extract_business_features()
 
-
+        self.extra_Trees_Classifier(20,15,18)
         self.SMOTE_NC()
         print("Feature Engeneering Completed!")
 
@@ -379,17 +379,21 @@ class FeatureEngineer:
         res = dict(sorted(res.items(), key=lambda kv: kv[1], reverse=True))
         return np.array(pd.DataFrame(res, index=[0]).T.head(n).index)
 
-    def extra_Trees_Classifier(self, n):
+    def extra_Trees_Classifier(self, n, mms, md):
         self.report.append('extra_Trees_Classifier')
         ''' choosing number of features based on their importance'''
         ds = self.training
         X = ds.drop(columns='Response')
         Y = ds['Response']
-        model = ExtraTreesClassifier()
+        model = ExtraTreesClassifier(min_samples_split = mms,max_depth = md)
         model.fit(X, Y)
         res = dict(zip(ds.drop(columns='Response').columns, model.feature_importances_))
         res = dict(sorted(res.items(), key=lambda kv: kv[1], reverse=True))
-        return np.array(pd.DataFrame(res, index=[0]).T.head(n).index)
+        print(np.array(pd.DataFrame(res, index=[0]).T.head(n).index))
+        temp = self.training[np.array(pd.DataFrame(res, index=[0]).T.head(n).index)]
+        temp['Response'] = self.training['Response']
+        self.training = temp
+        self.unseen = self.unseen[self.training.columns]
 
     def feature_selection_rank(self,treshold, *arg):
         print('before\n')

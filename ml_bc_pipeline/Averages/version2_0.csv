@@ -1,0 +1,2 @@
+,model,auroc,precision,recall,f1_score,best_threshold,best_profit_ratio,best_profit
+0,logistic_regression,0.8763998078286358,0.5492333239470936,0.6890612244897959,0.6056711817416632,0.66,0.46571428571428575,184.8
