@@ -5,7 +5,7 @@ from sklearn.model_selection import train_test_split, StratifiedKFold, KFold
 from ml_bc_pipeline.data_loader import Dataset
 from ml_bc_pipeline.data_preprocessing import Processor
 from ml_bc_pipeline.feature_engineering import FeatureEngineer
-from ml_bc_pipeline.model import gradientBoosting,grid_search_MLP, assess_generalization_auroc, decision_tree, naive_bayes, logistic_regression, xgboost, ensemble, adaboost, extraTreesClassifier
+from ml_bc_pipeline.model import gradientBoosting,grid_search_MLP, assess_generalization_auroc, decision_tree, naive_bayes, logistic_regression, xgboost, ensemble, adaboost, extraTreesClassifier, svc, cluster_model
 from datetime import datetime
 from os import listdir
 import json
@@ -74,6 +74,7 @@ def main():
 
     for seed in range(5):
 
+
         # =====================================
         # NEURAL NETWORK
         # =====================================
@@ -116,6 +117,19 @@ def main():
         logr_gscv = logistic_regression(fe.training, logr_param_grid, seed)
         print("Best parameter set: ", logr_gscv.best_params_)
         #report(logr_gscv.best_estimator_, fe.unseeen, logr_gscv.best_params_,logistic_regression.__name__)
+
+        ''' 
+        
+        # =====================================
+        # SVC (SUPPORT VECTOR MACHINE)
+        # =====================================
+
+        #svc_param_grid = {'svc__C': [0.5],
+        #                 'svc__kernel': ['linear'],
+        #                 'svc__gamma': [0.1]}
+        #svc_gscv = svc(fe.training, svc_param_grid, seed)
+        #print("Best parameter set: ", svc_gscv.best_params_)
+        # report(logr_gscv.best_estimator_, fe.unseeen, logr_gscv.best_params_,logistic_regression.__name__)
 
 
         # =====================================
@@ -162,6 +176,18 @@ def main():
 
         ensemble_estimator = ensemble(fe.training, classifiers)
         report(ensemble_estimator, fe.unseen, classifiers.keys(), ensemble.__name__)
+        
+        '''
+
+        params = {'mlp':{'model':grid_search_MLP, 'params': mlp_param_grid},
+                  'dt':{'model':decision_tree, 'params': dt_param_grid},
+                  'nb':{'model':naive_bayes, 'params': nb_param_grid}}
+
+
+
+
+
+        ensemble_estimator = cluster_model(fe.training, fe.unseen, params, seed)
 
         #Change partition
         if kfold_simple:
@@ -183,6 +209,7 @@ def main():
             fe = FeatureEngineer(pr.training, pr.unseen,seed)
             pipeline['feature_engineering'] = fe.report
             print('feature_engineering')
+            '''
             # =====================================
             # NEURAL NETWORK
             # =====================================
@@ -214,6 +241,15 @@ def main():
             logr_gscv.best_estimator_ = logr_gscv.best_estimator_.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
             #print("Best parameter set: ", logr_gscv.best_params_)
             report(logr_gscv.best_estimator_, fe.unseen, logr_gscv.best_params_,logistic_regression.__name__)
+
+            # =====================================
+            # SVC (SUPPORT VECTOR MACHINE)
+            # =====================================
+
+            svc_gscv.best_estimator_ = svc_gscv.best_estimator_.fit(
+                fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
+            # print("Best parameter set: ", logr_gscv.best_params_)
+            report(svc_gscv.best_estimator_, fe.unseen, svc_gscv.best_params_, 'svc')
 
             # =====================================
             # X TREE CLASSIFIER
@@ -248,6 +284,7 @@ def main():
 
             ensemble_estimator = ensemble_estimator.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
             report(ensemble_estimator, fe.unseen, classifiers.keys(), model_name='ensemble')
+            '''
 
 
 

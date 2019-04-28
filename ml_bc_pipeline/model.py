@@ -14,6 +14,10 @@ import xgboost as xgb
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.model_selection import StratifiedKFold
 from bayes_opt import BayesianOptimization
+from sklearn.svm import SVC
+from sklearn.cluster import KMeans
+from sklearn.mixture import GaussianMixture
+from sklearn.metrics import silhouette_score
 
 def grid_search_MLP(training, param_grid, seed, cv=5):
     """ Multi-layer Perceptron classifier hyperparameter estimation using grid search with cross-validation.
@@ -74,7 +78,7 @@ def decision_tree(training, param_grid, seed, cv=5):
 
     return clf_gscv
 
-def naive_bayes(training, param_grid, cv=5):
+def naive_bayes(training, param_grid, seed=None, cv=5):
 
     pipeline = Pipeline([("nb", ComplementNB())])
 
@@ -222,5 +226,69 @@ def profit(y_true, y_score):
     total_revenue = np.sum(y_true) * (revenue_answer - expense_answer)
     revenue_ratio = best_revenue/total_revenue
     return revenue_ratio
+
+
+def svc(training, param_grid, seed, cv=5):
+    pipeline = Pipeline([("svc", SVC(random_state=seed))])
+
+    clf_gscv = GridSearchCV(pipeline, param_grid, cv=cv, n_jobs=-1, scoring=make_scorer(profit))
+    clf_gscv.fit(training.loc[:, training.columns != "Response"].values, training["Response"].values)
+
+
+def cluster_model(training, unseen, classifiers, seed, cv=5):
+
+    Sum_of_squared_distances = []
+    K = range(1, 15)
+    for k in K:
+        km = KMeans(n_clusters=k)
+        km = km.fit(training.loc[:, training.columns != "Response"].values)
+        Sum_of_squared_distances.append(km.inertia_)
+
+    plt.plot(K, Sum_of_squared_distances, 'bx-')
+    plt.xlabel('k')
+    plt.ylabel('Sum_of_squared_distances')
+    plt.title('Elbow Method For Optimal k')
+    plt.show()
+
+
+    print('Best number of clusters: ')
+    n_clusters_ = input()
+
+    n_clusters_ = int(n_clusters_)
+
+    km = KMeans(n_clusters=n_clusters_)
+    km = km.fit(training.loc[:, training.columns != "Response"].values)
+
+    training['label'] = km.predict(training.loc[:, training.columns != "Response"].values)
+    unseen['label'] = km.predict(unseen.loc[:, unseen.columns != "Response"].values)
+
+    while np.sum(np.array([np.sum(training['label']==label) for label in range(n_clusters_)])<10)>0:
+        n_clusters_ = n_clusters_-1
+        km = KMeans(n_clusters=n_clusters_)
+        km = km.fit(training.loc[:, training.columns != "Response"].values)
+
+        training['label'] = km.predict(training.loc[:, training.columns != "Response"].values)
+        unseen['label'] = km.predict(unseen.loc[:, unseen.columns != "Response"].values)
+
+
+    clf_to_label = {}
+
+    for label in range(n_clusters_):
+        best_clf = None
+        best_profit = 0
+        print('n_clusters >>> ',label)
+        for clf in classifiers.items():
+            best_estimator = clf[1]['model'](training[training['label']==label].loc[:, training.columns!='label'], clf[1]['params'], seed)
+            if assess_generalization_auroc(best_estimator.best_estimator_, unseen[unseen['label']==label].loc[:, unseen.columns!='label'], False)[1]['best_profit_ratio']>best_profit:
+                best_profit = assess_generalization_auroc(best_estimator.best_estimator_, unseen[unseen['label']==label].loc[:, unseen.columns!='label'], False)[1]['best_profit_ratio']
+                best_clf = best_estimator.best_estimator_
+
+        clf_to_label[label] = best_clf
+
+    return km, clf_to_label
+
+
+
+
 
 
