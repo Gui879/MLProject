@@ -59,8 +59,8 @@ class Processor:
         self._impute_missing_values()
 
         #Outlier Treatment
-        outliers = self._boxplot_outlier_detection()
-        self.training.drop(outliers,axis = 0,inplace = True)
+        #outliers = self._boxplot_outlier_detection()
+        #self.training.drop(outliers,axis = 0,inplace = True)
 
         #self.outlier_rank(False,0.5,self._z_score_outlier_detection(3),self._boxplot_outlier_detection())
 
@@ -74,14 +74,11 @@ class Processor:
 
         #self.outlier_rank(False, 0.5, self._boxplot_outlier_detection(ranking = True), self._z_score_outlier_detection(3))
 
-        #outliers = self.mahalanobis_distance_outlier()
-        #self.training.drop(outliers,axis = 0,inplace = True)
+        outliers = self.mahalanobis_distance_outlier()
+        self.training.drop(outliers,axis = 0,inplace = True)
 
         #Normalization
         self._normalize()
-
-        #Balancing
-        #self.SMOTE_NC()
 
         print("Preprocessing complete!")
 
@@ -490,46 +487,6 @@ class Processor:
         outliers = list({key for (key, value) in outlier_rank_result[0].items() if value > treshold})
         outlier_info = dict([(k, v) for (k, v) in outlier_rank_result[1].items() if k in outliers])
         return outlier_info
-
-    #SAMPLING
-    def SMOTE_NC(self):
-        categories = self.training.dtypes
-        self.report.append('SMOTE_NC_sampling')
-        Y = self.training["Response"]
-        X = self.training.drop(columns=["Response"])
-        x_cols = X.columns
-        cat_cols = X[self.cat_vars].columns
-        sm = SMOTENC(random_state=self.seed, categorical_features=[cat_cols.get_loc(col) for col in cat_cols])
-        X_res, Y_res = sm.fit_resample(X.values, Y.values)
-        sampled_ds = pd.DataFrame(X_res,columns = x_cols)
-        sampled_ds['Response'] = Y_res
-        # sampled_ds.index=ds.index
-        self.training = sampled_ds
-
-
-    def SMOTE_sampling(self,ds):
-        self.report.append('SMOTE_sampling')
-        Y = ds["Response"]
-        X = ds.drop(columns=["Response"])
-        sm = SMOTE(random_state=self.seed)
-        X_res, Y_res = sm.fit_resample(X, Y)
-        sampled_ds = pd.DataFrame(X_res)
-        sampled_ds['Response'] = Y_res
-        # sampled_ds.index=ds.index
-        sampled_ds.columns = ds.columns
-        return round(sampled_ds, 2)
-
-    def Adasyn_sampling(self,ds):
-        self.report.append('Adasyn_sampling')
-        Y = ds["Response"]
-        X = ds.drop(columns=["Response"])
-        ada = ADASYN(random_state=self.seed)
-        X_res, Y_res = ada.fit_resample(X, Y)
-        sampled_ds = pd.DataFrame(X_res)
-        sampled_ds['Response'] = Y_res
-        # sampled_ds.index=ds.index
-        sampled_ds.columns = ds.columns
-        return round(sampled_ds, 2)
 
     def power_transformation(self):
         pt=PowerTransformer()
