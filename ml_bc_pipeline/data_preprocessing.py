@@ -67,7 +67,7 @@ class Processor:
 
         #self.mahalanobis_distance_outlier()
         #print("===============================")
-        print(self.outlier_rank(False, 0.5, self._boxplot_outlier_detection(ranking = True), self._z_score_outlier_detection(3)))
+        #print(self.outlier_rank(False, 0.5, self._boxplot_outlier_detection(ranking = True), self._z_score_outlier_detection(3)))
         #print("===============================")
 
         #self.mahalanobis_distance_outlier()

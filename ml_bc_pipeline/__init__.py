@@ -119,7 +119,7 @@ def main():
         print("Best parameter set: ", logr_gscv.best_params_)
         #report(logr_gscv.best_estimator_, fe.unseeen, logr_gscv.best_params_,logistic_regression.__name__)
 
-        ''' 
+
         
         # =====================================
         # SVC (SUPPORT VECTOR MACHINE)
@@ -190,6 +190,8 @@ def main():
 
         ensemble_estimator = cluster_model(fe.training, fe.unseen, params, seed)
 
+        '''
+
         #Change partition
         if kfold_simple:
             skf = KFold(n_splits=cv_splits, shuffle=True)
@@ -210,7 +212,11 @@ def main():
             fe = FeatureEngineer(pr.training, pr.unseen,seed)
             pipeline['feature_engineering'] = fe.report
             print('feature_engineering')
-            '''
+
+
+
+
+
             # =====================================
             # NEURAL NETWORK
             # =====================================
@@ -247,10 +253,10 @@ def main():
             # SVC (SUPPORT VECTOR MACHINE)
             # =====================================
 
-            svc_gscv.best_estimator_ = svc_gscv.best_estimator_.fit(
-                fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
-            # print("Best parameter set: ", logr_gscv.best_params_)
-            report(svc_gscv.best_estimator_, fe.unseen, svc_gscv.best_params_, 'svc')
+            #svc_gscv.best_estimator_ = svc_gscv.best_estimator_.fit(
+            #    fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
+            ## print("Best parameter set: ", logr_gscv.best_params_)
+            #report(svc_gscv.best_estimator_, fe.unseen, svc_gscv.best_params_, 'svc')
 
             # =====================================
             # X TREE CLASSIFIER
@@ -285,7 +291,7 @@ def main():
 
             ensemble_estimator = ensemble_estimator.fit(fe.training.loc[:, fe.training.columns != "Response"].values, fe.training["Response"].values)
             report(ensemble_estimator, fe.unseen, classifiers.keys(), model_name='ensemble')
-            '''
+
 
         log.to_csv('Logs/' + 'version' + str(test_version)+'_'+str(seed)+'.csv')
         with open('Pipelines/version'+str(test_version)+'_'+str(seed)+'.txt', 'w') as file:
